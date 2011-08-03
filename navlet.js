@@ -1,7 +1,7 @@
 
 (function() {
 
-	var navlet = function() {} (
+	var navlet = function() {
 		
 		var supportNavigationTimingAPI;
 		
@@ -29,16 +29,8 @@
 			}
 		}
 	);
-	var supportNavigationTimingAPI = window.performance ? true : false ;
 	
-	if(supportNavigationTimingAPI) {
-		displayAPIInfo();
-	}
-	else {
-		();
-	}
-	
-	var displayNoSupportMessage = function 
+	navlet.init();
 	
 
 })()
