@@ -1,18 +1,18 @@
 
 (function() {
 
-	var navlet = function() {
+	var navlet = (function() {
 		
 		var supportNavigationTimingAPI;
 		
 		var displayNoSupportMessage = function () {
 			
-				alert("Your browser does not support the Navigation TIming API");
+				alert("Your browser does not support the Navigation Timing API");
 		};
 		
 		var displayAPIInfo = function () {
 			
-				alert("Your browser does support the Navigation TIming API");
+				alert("Your browser support the Navigation TIming API");
 		};
 		
 		return {
@@ -28,7 +28,7 @@
 				}
 			}
 		}
-	};
+	})();
 	
 	navlet.init();
 	
