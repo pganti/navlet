@@ -15,7 +15,7 @@
         
         var mainContainerDiv = document.createElement("div");
         mainContainerDiv.id = "mainContainer";
-        mainContainerDiv.setAttribute("style", "position:absolute;bottom:0; left:0; right:0;background-color:black;opacity:0.85;z-index:10000;");
+        mainContainerDiv.setAttribute("style", "position:fixed;bottom:0; left:0; right:0;background-color:black;opacity:0.85;z-index:10000;");
         
         var advListDiv = document.createElement("div");
         advListDiv.setAttribute("style", "float: left; padding-left:50px;");
