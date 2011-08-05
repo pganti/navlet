@@ -1,22 +1,16 @@
 
-//javascript:(function () {  var navletPath = "http://navlet.googlecode.com/git/"; var head = document.getElementsByTagName('head')[0];  var bootstrapNode = document.createElement("script"); bootstrapNode.src= navletPath + "navlet.js";  var linkNode = document.createElement('link'); linkNode.id = 'navlet-css'; linkNode.type = 'text/css'; linkNode.rel = 'stylesheet'; linkNode.href = navletPath + 'navlet.css'; linkNode.media = 'screen';  head.appendChild(bootstrapNode); head.appendChild(linkNode);  })()
+//javascript:(function () {  window.navlet = { 	url_root: "http://navlet.googlecode.com/git/" };  var navletPath = "http://navlet.googlecode.com/git/";  var bootstrapNode = document.createElement("script"); bootstrapNode.src= window.navlet.url_root + "navlet.js"; document.getElementsByTagName('head')[0].appendChild(bootstrapNode);  })()
 
 javascript:(function () {
 
+window.navlet = {
+	url_root: "http://navlet.googlecode.com/git/"
+};
+
 var navletPath = "http://navlet.googlecode.com/git/";
-var head = document.getElementsByTagName('head')[0];
 
 var bootstrapNode = document.createElement("script");
-bootstrapNode.src= navletPath + "navlet.js";
-
-var linkNode = document.createElement('link');
-linkNode.id = 'navlet-css';
-linkNode.type = 'text/css';
-linkNode.rel = 'stylesheet';
-linkNode.href = navletPath + 'navlet.css';
-linkNode.media = 'screen';
-
-head.appendChild(bootstrapNode);
-head.appendChild(linkNode);
+bootstrapNode.src= window.navlet.url_root + "navlet.js";
+document.getElementsByTagName('head')[0].appendChild(bootstrapNode);
 
 })()
