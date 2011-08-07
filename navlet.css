@@ -1,29 +1,259 @@
 
-#navlet.mainContainer {
+#navlet .entry-label {
+	font-weight: bold;
+}
 
-	overflow: auto;
-	background-color:black; 
-	opacity:0.90; 
-	z-index:10000;
+/* panel style */
+
+#navlet .panel {
+	position: fixed;
+	z-index: 50000;
+	
 	font-size:14px;
 	font-family:Segoe UI,Arial,Verdana,Helvetica,sans-serif;
 	text-align:left;
 	line-height:18px;
+	color: white;
 	
+}
+
+#navlet .panel-content{
+	background-color:rgba(0,0,0, 0.9); 
+}
+
+#navlet .panel-header {
+	display: block;
+	overflow: auto;
+	height: 2em;
+	
+	background-color: black; 
+}
+
+#navlet .panel-title {
+	display: block;
+	float: left;
+	font-size:14px;
+	font-weight: bold;
+	margin:0;
+	margin-left: 8px;
 	color: white;
 }
 
-#closeTrigger {
-	position:absolute;
-	top:0; 
-	left:0; 
-	display:block; 
-	text-decoration:underline;
-	color: yellow; 
-	padding: 10px; 
-	cursor:pointer;
+#navlet .panel-action,
+#navlet .panel-action:link,
+#navlet .panel-action:visited {
+	text-decoration: underline;
+	cursor: pointer;
+	color: #FFEEEE;
+	margin-right: 8px;
 }
 
-.entry-label {
-	font-weight: bold;
+#navlet .panel-action:hover {
+	text-decoration: none;
+	color: white;
 }
+
+#navlet .panel-header:hover {
+	cursor:pointer;
+	background-color: #111111;
+}
+
+#navlet .panel-close {
+	display: block;
+	float: right;
+}
+
+#navlet .panel-toggle {
+	display: block;
+	float: right;
+}
+
+#navlet .dock-panel {
+	bottom:0; 
+	left:0; 
+	right:0; 
+	height: 3em;
+}
+
+#navlet  .dock-panel .panel-header {
+	height: 3em;
+}
+
+#navlet .dock-panel .panel-content{
+	position: relative;
+	text-align: center;
+	background: none;
+	top: -3em;
+	height: 3em;
+	padding-top: 6px;
+}
+
+
+
+#navlet .dock-panel .panel-toggle{
+	display: none;
+}
+			
+#navlet .top-left-panel {
+	bottom: 5em;
+	top: 0;
+	left: 0;
+	min-width: 400px; 
+	width: 20%;
+	overflow: auto;
+}
+
+#navlet .top-right-panel {
+	top: 0;
+	right: 0;
+	bottom:5em;
+	min-width: 400px; 
+	width: 20%;
+	overflow: auto;
+}
+
+#navlet .bottom-panel {
+	bottom: 3em;
+	left: 0;
+	right: 0;
+}
+
+#navlet .bottom-panel .panel-content {
+	height: 250px;
+}
+
+/* End panel style */
+
+#navlet .list {
+	margin: 0;
+	padding: 20px 40px;
+}
+
+/* Start button CSS code */
+
+#navlet .button {
+    color: #6e6e6e;
+    font: bold 12px Helvetica, Arial, sans-serif;
+    text-decoration: none;
+    padding: 7px 12px;
+    position: relative;
+    display: inline-block;
+    text-shadow: 0 1px 0 #fff;
+    -webkit-transition: border-color .218s;
+    -moz-transition: border .218s;
+    -o-transition: border-color .218s;
+    transition: border-color .218s;
+    background: #f3f3f3;
+    background: -webkit-gradient(linear,0% 40%,0% 70%,from(#F5F5F5),to(#F1F1F1));
+    background: -moz-linear-gradient(linear,0% 40%,0% 70%,from(#F5F5F5),to(#F1F1F1));
+    border: solid 1px #dcdcdc;
+    border-radius: 2px;
+    -webkit-border-radius: 2px;
+    -moz-border-radius: 2px;
+    margin-right: 10px;
+}
+#navlet .button:hover {
+    color: #333;
+    border-color: #999;
+    -moz-box-shadow: 0 2px 0 rgba(0, 0, 0, 0.2) -webkit-box-shadow:0 2px 5px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+#navlet .button:active {
+    color: #000;
+    border-color: #444;
+}
+#navlet .left {
+    -webkit-border-top-right-radius: 0;
+    -moz-border-radius-topright: 0;
+    border-top-right-radius: 0;
+    -webkit-border-bottom-right-radius: 0;
+    -moz-border-radius-bottomright: 0;
+    border-bottom-right-radius: 0;
+    margin: 0;
+}
+#navlet .middle {
+    border-radius: 0;
+    -webkit-border-radius: 0;
+    -moz-border-radius: 0;
+    border-left: solid 1px #f3f3f3;
+    margin: 0;
+    border-left: solid 1px rgba(255, 255, 255, 0);
+}
+#navlet .middle:hover,
+#navlet .right:hover { border-left: solid 1px #999 }
+#navlet .right {
+    -webkit-border-top-left-radius: 0;
+    -moz-border-radius-topleft: 0;
+    border-top-left-radius: 0;
+    -webkit-border-bottom-left-radius: 0;
+    -moz-border-radius-bottomleft: 0;
+    border-bottom-left-radius: 0;
+    border-left: solid 1px #f3f3f3;
+    border-left: solid 1px rgba(255, 255, 255, 0);
+}
+#navlet .big {
+    font-size: 16px;
+    padding: 10px 15px;
+}
+#navlet .supersize {
+    font-size: 20px;
+    padding: 15px 20px;
+}
+#navlet .save {
+    background: url(sprite.png) 10px 7px no-repeat #f3f3f3;
+    padding-left: 30px;
+}
+#navlet .add {
+    background: url(sprite.png)  10px -27px no-repeat #f3f3f3;
+    padding-left: 30px;
+}
+#navlet .delete {
+    background: url(sprite.png)  10px -61px no-repeat #f3f3f3;
+    padding-left: 30px;
+}
+#navlet .flag {
+    background: url(sprite.png)  10px -96px no-repeat #f3f3f3;
+    padding-left: 30px;
+}
+#navlet .up {
+    background: url(sprite.png)  13px -133px no-repeat #f3f3f3;
+    width: 18px;
+}
+#navlet .down {
+    background: url(sprite.png)  13px -168px no-repeat #f3f3f3;
+    width: 18px;
+}
+#navlet .save-big {
+    background: url(sprite.png) 15px 11px no-repeat #f3f3f3;
+    font-size: 16px;
+    padding: 10px 15px 10px 35px;
+}
+#navlet .add-big {
+    background: url(sprite.png)  15px -23px no-repeat #f3f3f3;
+    font-size: 16px;
+    padding: 10px 15px 10px 35px;
+}
+#navlet .delete-big {
+    background: url(sprite.png)  15px -57px no-repeat #f3f3f3;
+    font-size: 16px;
+    padding: 10px 15px 10px 35px;
+}
+#navlet .flag-big {
+    background: url(sprite.png)  15px -92px no-repeat #f3f3f3;
+    font-size: 16px;
+    padding: 10px 15px 10px 35px;
+}
+#navlet .up-big {
+    background: url(sprite.png)  15px -128px no-repeat #f3f3f3;
+    width: 18px;
+    font-size: 16px;
+    padding: 10px 15px;
+}
+#navlet .down-big {
+    background: url(sprite.png)  15px -163px no-repeat #f3f3f3;
+    width: 18px;
+    font-size: 16px;
+    padding: 10px 15px;
+}
+
+/* End button CSS code */
