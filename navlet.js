@@ -163,7 +163,7 @@
 	
 	var Panel = function() {
 		
-		var id, tpl, domCtx, ctx, cssClass, panelType, template, data;
+		var id, tpl, domCtx, ctx, cssClass, panelType, template, data, layoutClass;
 		
 		var predefinedPanels = {
 			"dock-panel": {},
@@ -187,7 +187,16 @@
 			var panel = ctx.document.getElementById(id);
 			panel.innerHTML = html;
 			update();
-			togglePanel();
+			
+			var previousState = ctx.localStorage.getItem(panelType + "-state")
+			
+			if(
+				(previousState == AppConfig.labels.Expand)  // was expanded
+				||
+				(previousState == null)){ // was not defined, default state is expanded
+				togglePanel();
+			}
+			
 			attachPanelEvents();
 			
 			return elt;
@@ -202,7 +211,29 @@
 			
 			var panelToggle = ctx.document.querySelectorAll("#"+ id +" .panel-header .panel-toggle")[0];
 			var txt = panelToggle.innerHTML;
+			
 			panelToggle.innerHTML = (txt == AppConfig.labels.Expand) ? AppConfig.labels.Collapse : AppConfig.labels.Expand;
+			
+			
+			// Extract to a wrapper for try/catch:
+			var currentState = (txt == AppConfig.labels.Expand) ? AppConfig.labels.Expand : AppConfig.labels.Collapse;
+			
+			
+			
+			// Apply layout CSS class:
+			if(currentState ==  AppConfig.labels.Expand) {
+				
+				panelToggle.innerHTML = AppConfig.labels.Collapse;
+				if(layoutClass != "")
+					ctx.document.getElementById("navlet").setAttribute('class', layoutClass);
+			}
+			else {
+				
+				panelToggle.innerHTML = AppConfig.labels.Expand;
+				if(layoutClass != "")
+					ctx.document.getElementById("navlet").setAttribute('class', '');
+			}
+			ctx.localStorage.setItem(panelType + "-state", currentState);
 			
 			var panelContent = ctx.document.querySelectorAll("#"+ id +" .panel-content")[0];
 			if(panelContent.style.display == "none") {
@@ -261,7 +292,8 @@
 				
 				if(isSet(jsonConf)) {
 					domCtx =  jsonConf.domContext ||  ctx.document.getElementsByTagName('body')[0];
-					title = jsonConf.title || "Default title";
+					title = jsonConf.title || "";
+					layoutClass = jsonConf.layoutClass || "";
 					panelType = jsonConf.panelType;
 					if(!isSet(predefinedPanels[panelType])) {
 						error("Panel type not well defined")
@@ -347,16 +379,16 @@
 				var data = ctx.performance.timing;
 				
 				var dockPanel = Panel().init(ctx, {
-					"title" : "Dock",
+					"title" : "",
 					"domContext" : navletMainNode,
 					"panelType" : "dock-panel",
 					"template": function(data) {
 						
 						var html = [];
-						html.push("<a data-global-event='close-navlet' class='button action' href='javascript:void(0)' >close Navlet</a>");
-						html.push("<a id='toggle-monitoring' data-global-event='toggle-monitoring' class='button action' href='javascript:void(0)' >" + (monitorModeOn ? AppConfig.labels.StopMonitoring : AppConfig.labels.StartMonitoring ) + "</a>");
-						html.push("<a data-global-event='chart' class='button action' href='javascript:void(0)' >show diagram</a>");
-						html.push("<a data-global-event='about' class='button action' href='javascript:void(0)' >about</a>");
+						html.push("<a id='toggle-monitoring' data-global-event='toggle-monitoring' class='awesome color action' href='javascript:void(0)' >" + (monitorModeOn ? AppConfig.labels.StopMonitoring : AppConfig.labels.StartMonitoring ) + "</a>");
+						html.push("<a data-global-event='about' class='awesome color action' href='javascript:void(0)' >about</a>");
+						html.push("<a data-global-event='close-navlet' class='awesome color action' href='javascript:void(0)' >close Navlet</a>");
+						
 						
 						return html.join('');
 					}
@@ -364,7 +396,7 @@
 				panels.push(dockPanel);
 				
 				var rawValuePanel = Panel().init(ctx, {
-					"title" : "Raw Values",
+					"title" : "Navigation Timing API raw values",
 					"domContext" : navletMainNode,
 					"panelType" : "top-left-panel",
 					"data": data,
@@ -385,7 +417,7 @@
 				panels.push(rawValuePanel);
 				
 				var advValuePanel = Panel().init(ctx, {
-					"title" : "Custom Values",
+					"title" : "User defined metrics",
 					"domContext" : navletMainNode,
 					"panelType" : "top-right-panel",
 					"data": data,
@@ -417,37 +449,21 @@
 				panels.push(advValuePanel);
 				
 				var chartPanel = Panel().init(ctx, {
-					"title" : "Chart",
+					"title" : "Timeline representation",
 					"domContext" : navletMainNode,
 					"panelType" : "bottom-panel",
 					"data": data,
+					"layoutClass" : "bottom-panel-open",
 					"template" : function(data) {
 						
-						var advList = "<ul class='list'>";
-				
-						function addItemToAdvList(key, value) {
-							advList += "<li class='entry'><span class='entry-label'>"+key+"</span>: "+value + "</li>";
-						}
+						var advList = "TBD- TBD TBD ul class='list' fdgf f g dfg ";
 						
-						addItemToAdvList("responseStart - navigationTime", (data.responseStart - data.navigationStart));
-						
-						addItemToAdvList("connection duration", (data.connectEnd - data.connectStart));
-						addItemToAdvList("domLoading - responseStart", (data.domLoading - data.responseStart));
-						addItemToAdvList("domInteractive - responseStart", (data.domInteractive - data.responseStart));
-						
-						addItemToAdvList("domContentLoadedEventStart - responseStart", (data.domContentLoadedEventStart - data.responseStart));
-						addItemToAdvList("domReadyEvent duration", (data.domContentLoadedEventEnd - data.domContentLoadedEventStart));
-						
-						addItemToAdvList("loadEventStart - responseStart", (data.loadEventStart - data.responseStart));
-						addItemToAdvList("loadEvent duration", (data.loadEventEnd - data.loadEventStart));
-						
-						advList += "</ul>";
 						
 						return advList;
 					}
 				});
 				panels.push(chartPanel);
-				
+			
 			}
 			else {
 				displayNoSupportMessage();
