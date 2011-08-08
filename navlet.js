@@ -9,7 +9,9 @@
 		"labels": {
 			
 			"StartMonitoring" : "Start Monitoring",
-			"StopMonitoring" : "Stop Monitoring"
+			"StopMonitoring" : "Stop Monitoring",
+			"Expand" : "expand",
+			"Collapse" : "collapse"
 		},
 		
 		NavTimingProperties : [
@@ -198,6 +200,10 @@
 		
 		var togglePanel = function() {
 			
+			var panelToggle = ctx.document.querySelectorAll("#"+ id +" .panel-header .panel-toggle")[0];
+			var txt = panelToggle.innerHTML;
+			panelToggle.innerHTML = (txt == AppConfig.labels.Expand) ? AppConfig.labels.Collapse : AppConfig.labels.Expand;
+			
 			var panelContent = ctx.document.querySelectorAll("#"+ id +" .panel-content")[0];
 			if(panelContent.style.display == "none") {
 				panelContent.style.display = "block";
@@ -232,12 +238,12 @@
 		var buildPanel = function() {
 		
 			var html = [];
-			var expanded = true;
+			var expanded = false;
 			
 			html.push("<div class='panel-header'>");
 			html.push("    <h1 class='panel-title'>" + title + "</h1>");
 			
-			html.push("    <a class='panel-toggle panel-action' href='javascript:void(0)'>" + (expanded ? "collapse" : "expand") + "</a>");
+			html.push("    <a class='panel-toggle panel-action' href='javascript:void(0)'>" + (expanded ? AppConfig.labels.Expand : AppConfig.labels.Expand) + "</a>");
 			//html.push("    <a class='panel-close panel-action' href='javascript:void(0)'>close</a>");
 			
 			html.push("</div>");
@@ -298,21 +304,28 @@
 		var masterWindow, remoteWindow;
 		var monitorModeOn = false;
 		
+		// For remote only:
+		var autoCloseTimer = null;
+		
 		var displayNoSupportMessage = function () {
 			
 				alert("Your browser does not support the Navigation Timing API");
 		};
 			
 		
+		var clean = function() {
+			// Destroy previous instances:
+			var dirtyNavletContainer = ctx.document.getElementById("navlet");
+			if(isSet(dirtyNavletContainer)) {
+				body.removeChild(dirtyNavletContainer);
+			}
+		};
+		
 		var initLocalMode = function() {
 			
 			if(supportNavigationTimingAPI) {
 			
-				// Destroy previous instances:
-				var dirtyNavletContainer = ctx.document.getElementById("navlet");
-				if(isSet(dirtyNavletContainer)) {
-					body.removeChild(dirtyNavletContainer);
-				}
+				clean();
 				
 				navletMainNode = generateElement("div", {
 					"id": "navlet"
@@ -341,9 +354,9 @@
 						
 						var html = [];
 						html.push("<a data-global-event='close-navlet' class='button action' href='javascript:void(0)' >close Navlet</a>");
-						html.push("<a id='toggle-monitoring' data-global-event='toggle-monitoring' class='button action' href='javascript:void(0)' >"+ AppConfig.labels.StartMonitoring+"</a>");
-						html.push("<a data-global-event='close-navlet' class='button action' href='javascript:void(0)' >show diagram</a>");
-						html.push("<a data-global-event='close-navlet' class='button action' href='javascript:void(0)' >about</a>");
+						html.push("<a id='toggle-monitoring' data-global-event='toggle-monitoring' class='button action' href='javascript:void(0)' >" + (monitorModeOn ? AppConfig.labels.StopMonitoring : AppConfig.labels.StartMonitoring ) + "</a>");
+						html.push("<a data-global-event='chart' class='button action' href='javascript:void(0)' >show diagram</a>");
+						html.push("<a data-global-event='about' class='button action' href='javascript:void(0)' >about</a>");
 						
 						return html.join('');
 					}
@@ -361,7 +374,7 @@
 						var tmpPropName ;
 						for(var i=0, l=AppConfig.NavTimingProperties.length; i<l; i++) {
 							tmpPropName = AppConfig.NavTimingProperties[i].name
-							rawListHtml += "<li class='entry'><span class='entry-label'>"+ tmpPropName +"</span>: "+data[tmpPropName] + "</li>"
+							rawListHtml += "<li class='entry'><span class='entry-label'>"+ tmpPropName +"</span><span class='entry-value'>"+data[tmpPropName] + "</span></li>"
 						}
 						   
 						rawListHtml += "</ul>";
@@ -381,7 +394,7 @@
 						var advList = "<ul class='list'>";
 				
 						function addItemToAdvList(key, value) {
-							advList += "<li class='entry'><span class='entry-label'>"+key+"</span>: "+value + "</li>";
+							advList += "<li class='entry'><span class='entry-label'>"+key+"</span><span class='entry-value'>"+value + "</span></li>";
 						}
 						
 						addItemToAdvList("responseStart - navigationTime", (data.responseStart - data.navigationStart));
@@ -446,12 +459,13 @@
 			monitorModeOn = true;
 			// Attach event handler to receive data from remote windows:
 			ctx.addEventListener("message", function(e){
-					console.log(e.data);
+					ctx.console.log(e.data);
 					
 					for(var i=0; i<panels.length; i++) {
 						panels[i].updateData(e.data);
 					}
-					spawnRemoteWindow();
+					reloadRemoteWindow();
+			
 			}, false);
 			
 			spawnRemoteWindow();
@@ -474,6 +488,14 @@
 		
 		var spawnRemoteWindow = function() {
 			
+			ctx.console.log("spawnRemoteWindow")
+			if(isSet(remoteWindow)) {
+				if(remoteWindow.close) {
+					remoteWindow.close();
+				}
+				remoteWindow = null;
+			}
+			
 			var windowOptions = [];
 			windowOptions.push("width=400");
 			windowOptions.push("height=400");
@@ -481,14 +503,7 @@
 			//windowOptions.push("resizable=1");
 			//windowOptions.push("location=1"); 
 			
-			var windowId =(new Date()).getTime();
-			
-			if(isSet(remoteWindow)) {
-				if(remoteWindow.close) {
-					remoteWindow.close();
-				}
-				remoteWindow = null;
-			}
+			//var windowId =(new Date()).getTime();
 			
 			remoteWindow = ctx.open(
 				ctx.location.href,
@@ -501,7 +516,23 @@
 			
 			remoteWindow.navlet = {"url_root" : ctx.navlet.url_root }
 			
-			setTimeout(function(){
+			reloadRemoteWindow();
+			
+		};
+		
+		var reloadRemoteWindow = function() {
+			
+			if(autoCloseTimer != null) {
+				// Autoclose set, deactivating it:
+				ctx.console.log("Clearing - autoclosing");
+				remoteWindow.clearTimeout(autoCloseTimer);
+			}
+			ctx.console.log("reloadRemoteWindow 1")
+			remoteWindow.location.reload();
+			ctx.console.log("reloadRemoteWindow 2")
+			
+			ctx.setTimeout(function(){
+				ctx.console.log("reloadRemoteWindow 3")
 			
 				var remoteNavlet = new Navlet();
 				remoteNavlet.init(remoteWindow, 
@@ -511,17 +542,31 @@
 					}
 				);
 					
-				
+				ctx.console.log("reloadRemoteWindow 4")
+			
 			}, 1000);
+			ctx.console.log("reloadRemoteWindow 5")
 			
 		};
 		
 		var initRemoteMode = function() {
-			
+			masterWindow.console.log("initRemoteMode 1")
 			setTimeout(function(){	
+					 masterWindow.console.log("initRemoteMode 2")
 					 masterWindow.postMessage(ctx.performance.timing, ctx.location.href);
-					 ctx.close();
+					 masterWindow.console.log("initRemoteMode 3")
+					
+					autoCloseTimer = ctx.setTimeout(function(){	
+						
+						// Autoclose programmed if we lose connection 
+						// with masterWindow (could be close by the user for instance)
+						masterWindow.console.log("Connection lost - autoclosing remoteWindow");
+						ctx.close();	
+					},10000);
+					
 			},2000);
+			masterWindow.console.log("initRemoteMode 4")
+			
 		}
 		
 		return {
@@ -565,6 +610,7 @@
 				}
 				else if(actionName == "close-navlet") {
 					stopMonitorMode();
+					clean();
 				}
 				else {
 					alert("no action mapped: " + actionName)

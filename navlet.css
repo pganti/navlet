@@ -1,7 +1,4 @@
 
-#navlet .entry-label {
-	font-weight: bold;
-}
 
 /* panel style */
 
@@ -26,7 +23,8 @@
 	overflow: auto;
 	height: 2em;
 	
-	background-color: black; 
+	background-color: black;
+	-webkit-user-select: none;
 }
 
 #navlet .panel-title {
@@ -35,7 +33,16 @@
 	font-size:14px;
 	font-weight: bold;
 	margin:0;
+	padding:0;
 	margin-left: 8px;
+	color: white;
+	background: none;
+	border: none;
+	
+	font-size:14px;
+	font-family:Segoe UI,Arial,Verdana,Helvetica,sans-serif;
+	text-align:left;
+	line-height:18px;
 	color: white;
 }
 
@@ -126,7 +133,41 @@
 
 #navlet .list {
 	margin: 0;
-	padding: 20px 40px;
+	padding: 20px 0;
+}
+
+/*#navlet .list .entry:nth-child(even) {background: #000}*/
+#navlet .list .entry:nth-child(odd) {
+	background-color: #111;
+	border: 1px solid #111;
+}
+
+#navlet .list .entry {
+	display: block;
+	padding: 6px 8px;
+	overflow: auto;
+	border: 1px solid transparent;
+}
+
+#navlet .list .entry:hover {
+	border-top: 1px solid #fff;
+	border-bottom: 1px solid #fff;
+}
+
+#navlet .entry-label {
+	display:block;
+	font-weight: bold;
+	float: left;
+	text-align: left;
+	width: 210px;
+}
+#navlet .entry-value {
+	font-weight: bold;
+	display:block;
+	float: right;
+	text-align: right;
+	text-decoration: strike;
+	width: 135px;
 }
 
 /* Start button CSS code */
