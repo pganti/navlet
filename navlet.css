@@ -105,8 +105,6 @@
 	padding-top: 6px;
 }
 
-
-
 #navlet .dock-panel .panel-toggle{
 	display: none;
 }
@@ -114,7 +112,6 @@
 #navlet .dock-panel  .button{
 	margin-right: 2em;
 }
-
 			
 #navlet .top-left-panel {
 	bottom: 5.2em;
@@ -148,6 +145,7 @@
 
 #navlet .bottom-panel .panel-content {
 	height: 13em;
+	overflow:visible;
 }
 
 /* End panel style */
@@ -155,7 +153,8 @@
 /* Heavy weight and local rules to override styles coming from monitored page*/
 #navlet .font,
 #nav let .anchor-font,
-#navlet .title-font {
+#navlet .title-font,
+#navlet .row-font {
 	letter-spacing: 0;
 	word-spacing: 0;
 	text-transform: none;
@@ -168,6 +167,11 @@
 	text-align:left;
 	line-height:18px;
 	background: none;
+	font-weight: normal;
+}
+
+#navlet .row-font {
+	font-weight: bold;
 }
 
 #nav let .anchor-font {
@@ -185,6 +189,9 @@
 	width: 100%;
 	overflow-x : hidden;
 	overflow-y : auto; 
+	background: none;
+	border: none;
+	float: none;
 }
 
 /*#navlet .list .entry:nth-child(even) {background: #000}*/
@@ -271,5 +278,76 @@
 	background-color: #2daebf;
 }
 
-
 /* End button CSS code */
+
+
+/* Chart styles */
+
+#navlet #bottom-panel-id .panel-content {
+	padding: 0 80px;
+}
+
+#navlet .timeline {
+	overflow: visible;
+	position:relative;
+	height: 20px;
+	padding: 20px 0;
+}
+
+#navlet .timeline-block {
+	position: absolute;
+	top: 0;
+	height: 20px;
+	background-color: red;	
+}
+
+#navlet .timeline-block-label {
+	position: absolute;
+	top: -25px;
+	left:0;
+	background-color:black;
+	border: 1px white solid;
+	z-index: 1;
+}
+
+#navlet .timeline-block:hover {
+	background-color: brown;
+	cursor: pointer;
+	margin-right: -1px;
+	margin-bottom: -1px;
+	border: yellow 1px solid;
+}
+
+#navlet .chart-requestBlock {
+	background-color: green;
+}
+
+
+#navlet .chart-responseBlock {
+	background-color: blue;
+}
+
+#navlet .chart-domReady {
+	background-color: pink;
+}
+
+#navlet .chart-domReadyDuration {
+	background-color: yellow;
+}
+
+/* Utility CSS classes: */
+#navlet .none {
+	display:none;
+}
+#navlet .hidden {
+	visibility:hidden;
+}
+#navlet .reveal:hover  .none {
+	display: block;
+}
+#navlet .reveal:hover  .hidden {
+	visibility:visible;
+}
+
+
+

@@ -2,7 +2,15 @@
 	
 	var navlet;
 	
-	var minimalRealisticUnixTime = 1313237533128 ;
+	var neededFeatures = [
+		"performance",
+		"localStorage",
+		"JSON.stringify",
+		"JSON.parse",
+		"document.querySelectorAll"
+	]
+	
+	var minimalRealisticUnixTime = 1300000000000 ; // an arbitrary date in the past
 	
 	var AppConfig = {
 		
@@ -106,8 +114,11 @@
 		]
 	}
 	
-	var log = function(msg) {
+	var log = function(msg, obj) {
 		console.log(msg);
+		if(isSet(obj)) {
+			console.log(obj);
+		}
 	}
 	
 	var error = function(msg) {
@@ -180,6 +191,27 @@
 		
 		return {
 			
+			serialize : function() {
+				
+				return ctx.JSON.stringify({
+					
+					"navigationTimingData" : navigationTimingData,
+					"creationTime": creationTime,
+					"isReady": this.isReady()
+					
+				});
+			},
+			
+			setFromSerializedPerfData: function(serializedPerfData) {
+				
+				var obj = ctx.JSON.parse(serializedPerfData);
+				
+				navigationTimingData = obj.navigationTimingData;
+				creationTime = obj.creationTime;
+				
+				return this;
+			},
+			
 			getNavTimingData : function() {
 				
 				return navigationTimingData;
@@ -190,7 +222,7 @@
 				return creationTime;
 			},
 			
-			isValid : function() {
+			isReady : function() {
 			
 				// Check if the performance object was ready when get:
 				// Basically we check that the first and last field
@@ -242,7 +274,6 @@
 				"id": id,
 				"class": "panel " + panelType
 			}, ctx.document);
-			
 			
 			domCtx.appendChild(elt);
 			
@@ -298,11 +329,11 @@
 			ctx.localStorage.setItem(panelType + "-state", currentState);
 			
 			var panelContent = ctx.document.querySelectorAll("#"+ id +" .panel-content")[0];
-			if(panelContent.style.display == "none") {
-				panelContent.style.display = "block";
+			if(panelContent.style.visibility == "hidden") {
+				panelContent.style.visibility = "visible";
 			}
 			else {
-				panelContent.style.display = "none";
+				panelContent.style.visibility = "hidden";
 			}
 			
 		}
@@ -341,7 +372,7 @@
 			
 			html.push("</div>");
 			
-			html.push("<div style='display:none' class='panel-content'><div class='panel-content-wrap'>");
+			html.push("<div style='visibility:hidden' class='panel-content'><div class='panel-content-wrap'>");
 			html.push("</div>");
 			
 			var panelStub = generateContainer(html.join(""));
@@ -393,20 +424,72 @@
 	
 	var Navlet = function() {
 		
-		var supportNavigationTimingAPI;
-		var canvas_frame, ctx, body, head, navletMainNode;
-		var panels = [];
-		var masterWindow, remoteWindow;
-		var monitorModeOn = false;
-		var rawOffsetValue = false;
-		var dockPanel, rawValuesPanel, customValuesPanel, chartPanel;
+		var canvas_frame, ctx, body, head, navletMainNode,
+		    panels = [],
+		    masterWindow, remoteWindow,
+		    monitorModeOn = false,
+		    unsupportedFeatures = [],
+		    rawOffsetValue,
+		    dockPanel, rawValuesPanel, customValuesPanel, chartPanel,
+			windowName = "MasterWindow";
 		
 		// For remote only:
 		var autoCloseTimer = null;
 		
-		var displayNoSupportMessage = function () {
+		var log = function(msg, obj) {
+		
+			var prefix = ""
+			if(isSet(windowName)) {
+				prefix = "[" + windowName + "]: ";
+			}
+			masterWindow.console.log(prefix + msg);
+			if(isSet(obj)) {
+				masterWindow.console.log(obj);
+			}
+		};
+		
+		var getOffsetRawValuesOption = function() {
+			var storedOffsetOption = ctx.localStorage.getItem("rawOffsetValue");
+			if(storedOffsetOption != null) {
+				
+				if(storedOffsetOption == "true" || storedOffsetOption == "false") {
+					return rawOffsetValue = (storedOffsetOption === 'true');
+				}	
+			}
+			return false;
+		};
+		
+		var getUnsupportedFeatures = function(ctx) {
+		
+			if(!isSet(ctx)) {
+				ctx = window;
+			}
+		
+			var unsupportedFeatures = [];
+			var feat, featurePath;
 			
-				alert("Your browser does not support the Navigation Timing API");
+			for(var i=0;i<neededFeatures.length;i++) {
+				
+				featurePath = neededFeatures[i].split('.');
+				feat = ctx;
+				for(var p=0; p<featurePath.length; p++) {
+					feat = feat[featurePath[p]];
+					if(!isSet(feat)) {
+						unsupportedFeatures.push(neededFeatures[i]);
+						break;
+					}
+				}
+			}
+			
+			return unsupportedFeatures;
+		}
+		
+		var displayNoSupportMessage = function () {
+				
+				var msg = "Your browser does not support some needed JavaScript APIs.\n\n";
+				msg += "The following list of features is not supported: "+unsupportedFeatures.join(", ")+".\n\n";
+				msg += "Please use IE9 (check your document mode in developer ) or an up to date Google Chrome.\n";
+				alert(msg);
 		};
 			
 		
@@ -420,7 +503,10 @@
 		
 		var initLocalMode = function() {
 			
-			if(supportNavigationTimingAPI) {
+			rawOffsetValue = getOffsetRawValuesOption();
+			unsupportedFeatures = getUnsupportedFeatures(ctx);
+			
+			if(unsupportedFeatures.length == 0) {
 			
 				clean();
 				
@@ -440,9 +526,32 @@
 				
 				body.appendChild(linkNode);
 				
-				
+				drawPanels();	
+			}
+			else {
+				displayNoSupportMessage();
+			}
+		};
+		
+		var drawPanels = function() {
+		
 				var data = PerfData(ctx);
 				
+				if(!data.isReady()) {
+					log("Data not ready, waiting before drawing panels");
+					ctx.document.getElementById('navlet-loader').innerHTML = "Waiting for window.performance object to be available...";
+					setTimeout(drawPanels, 100);
+					return;
+				}
+				
+				// We are done loading dependencies and window.performance is available: we hide the loader
+				var loader = ctx.document.getElementById('navlet-loader');
+				loader.innerHTML = "";
+				loader.style.padding = 0;
+				
+					
+		
+			
 				dockPanel = Panel().init(ctx, {
 					"title" : "",
 					"domContext" : navletMainNode,
@@ -467,18 +576,11 @@
 					"data": data,
 					"template" : function(data) {
 						
-						var storedOffsetOption = ctx.localStorage.getItem("rawOffsetValue");
-						if(storedOffsetOption != null) {
-							
-							if(storedOffsetOption == "true" || storedOffsetOption == "false") {
-								rawOffsetValue = (storedOffsetOption === 'true');
-							}
-							
-						}
+						var storedOffsetOption = getOffsetRawValuesOption()
 						
 						var rawOffsetOption = "<div class='option-column'>";
 						rawOffsetOption += "<input id='rawOffsetOption' data-global-event='offset-raw-values' class='action' type='checkbox' " + (rawOffsetValue ? "checked='yes'" : "" )  + " />"
-						rawOffsetOption += "<label for='rawOffsetOption' >Offset raw values with navigationStart value</label>";
+						rawOffsetOption += "<label class='font' for='rawOffsetOption' >Offset raw values with navigationStart value</label>";
 						rawOffsetOption += "</div>";
 						
 						var rawListHtml = rawOffsetOption + "<ul  class='list'>";
@@ -502,7 +604,7 @@
 								value = value - offset;
 							}
 							
-							rawListHtml += "<li class='entry "+ NA +"'><span class='entry-label'>"+ tmpPropName +"</span><span class='entry-value'>"+value + "</span></li>"
+							rawListHtml += "<li class='entry "+ NA +"'><span class='entry-label row-font'>"+ tmpPropName +"</span><span class='entry-value row-font'>"+value + "</span></li>"
 						}
 						   
 						rawListHtml += "</ul>";
@@ -524,7 +626,7 @@
 						var navData = data.getNavTimingData();
 						
 						function addItemToAdvList(key, value) {
-							advList += "<li class='entry'><span class='entry-label'>"+key+"</span><span class='entry-value'>"+value + "</span></li>";
+							advList += "<li class='entry'><span class='entry-label row-font'>"+key+"</span><span class='entry-value row-font'>"+value + "</span></li>";
 						}
 						
 						addItemToAdvList("responseStart - navigationTime", (navData.responseStart - navData.navigationStart));
@@ -554,34 +656,88 @@
 					"layoutClass" : "bottom-panel-open",
 					"template" : function(data) {
 						
-						var advList = "TBD- TBD TBD ul class='list' fdgf f g dfg ";
+						var navData = data.getNavTimingData(),
+							initialTime = navData["navigationStart"],
+							DT = navData["loadEventEnd"] - navData["navigationStart"],
+							availableWidthInPixel = ctx.document.querySelectorAll('#bottom-panel-id .panel-content-wrap')[0].offsetWidth - 160,
+							widthPerc, leftMargin;
+						
+						console.log(ctx.document.querySelectorAll('#bottom-panel-id .panel-content')[0].offsetWidth)
+						console.log(availableWidthInPixel)
+						var buildTimelineBlock = function(htmlArray, startTime, endTime, className) {
+							widthPerc = Math.floor(availableWidthInPixel*(endTime - startTime)/DT);
+							leftMargin = Math.floor(availableWidthInPixel*(startTime - initialTime)/DT)
+							htmlArray.push("<div class='timeline-block reveal ");
+							if(isSet(className)) {
+								htmlArray.push(className);
+							}
+							htmlArray.push("' style='width:");
+							htmlArray.push(widthPerc);
+							htmlArray.push('px;left:');
+							htmlArray.push(leftMargin);
+							htmlArray.push("px;' >");
+							htmlArray.push("<div class='timeline-block-label none'>pouet</div></div>");
+							
+							
+						};
+						
+						var chartHtml = [];
+						
+						chartHtml.push("<div id='rawValuesChart' class='rawValuesChart'>");
+						chartHtml.push("<div class='timeline'>");
+						
+						buildTimelineBlock(chartHtml, navData["domainLookupStart"], navData["domainLookupEnd"], 'chart-dnsBlock');
+						buildTimelineBlock(chartHtml, navData["connectStart"], navData["connectEnd"], 'chart-TCPBlock');
+						buildTimelineBlock(chartHtml, navData["requestStart"], navData["responseStart"], 'chart-requestBlock');
+						buildTimelineBlock(chartHtml, navData["responseStart"], navData["responseEnd"], 'chart-responseBlock');
+						
+						chartHtml.push("</div>");
+						
+						chartHtml.push("<div class='timeline'>");
+						
+						buildTimelineBlock(chartHtml, navData["domLoading"], navData["domContentLoadedEventStart"], 'chart-domReady');
+						buildTimelineBlock(chartHtml, navData["domContentLoadedEventStart"], navData["domContentLoadedEventEnd"], 'chart-domReadyDuration');
+						buildTimelineBlock(chartHtml, navData["domContentLoadedEventEnd"], navData["domComplete"], 'chart-domReadyToLoad');
+						
+						buildTimelineBlock(chartHtml, navData["loadEventStart"], navData["loadEventEnd"]);
+						
+						chartHtml.push("</div>");
+						
+						chartHtml.push("</div>");
+						
+						chartHtml.push("<div id='customValuesChart' class='customValuesChart'>");
 						
 						
-						return advList;
+						
+						chartHtml.push("</div>");
+						
+						return chartHtml.join('');;
 					}
 				});
 				panels.push(chartPanel);
 			
-			}
-			else {
-				displayNoSupportMessage();
-			}
+		
+		};
+		
+		var onPostMessageReceived = function(e){
+				//log("Receiving serialized data received from remote window: "+e.data);
+				ctx.console.log("[MasterWindow]: <-- Receiving serialized data received from remote window...");
+				var unserializedPostMessageData = PerfData().setFromSerializedPerfData(e.data);
+				//log("unserializedPostMessageData: ", unserializedPostMessageData);
+				
+				for(var i=0; i<panels.length; i++) {
+					panels[i].updateData(unserializedPostMessageData);
+					panels[i].updateView();
+				}
+				reloadRemoteWindow();
+		
 		};
 		
 		var startMonitorMode = function() {
 			
 			monitorModeOn = true;
 			// Attach event handler to receive data from remote windows:
-			ctx.addEventListener("message", function(e){
-					ctx.console.log(e.data);
-					
-					for(var i=0; i<panels.length; i++) {
-						panels[i].updateData(e.data);
-						panels[i].updateView();
-					}
-					reloadRemoteWindow();
-			
-			}, false);
+			ctx.addEventListener("message", onPostMessageReceived, false);
 			
 			spawnRemoteWindow();
 		};
@@ -589,7 +745,7 @@
 		var stopMonitorMode = function() {
 			
 			// Attach event handler to receive data from remote windows:
-			ctx.removeEventListener("message");
+			ctx.removeEventListener("message", onPostMessageReceived);
 			
 			if(isSet(remoteWindow)) {
 				if(remoteWindow.close) {
@@ -603,7 +759,7 @@
 		
 		var spawnRemoteWindow = function() {
 			
-			ctx.console.log("spawnRemoteWindow")
+			log("Initial spawning of remote window")
 			if(isSet(remoteWindow)) {
 				if(remoteWindow.close) {
 					remoteWindow.close();
@@ -614,8 +770,9 @@
 			var windowOptions = [];
 			windowOptions.push("width=400");
 			windowOptions.push("height=400");
+			windowOptions.push("fullscreen=yes");
 			//windowOptions.push("menubar=1");
-			//windowOptions.push("resizable=1");
+			windowOptions.push("resizable=yes");
 			//windowOptions.push("location=1"); 
 			
 			//var windowId =(new Date()).getTime();
@@ -639,15 +796,14 @@
 			
 			if(autoCloseTimer != null) {
 				// Autoclose set, deactivating it:
-				ctx.console.log("Clearing - autoclosing");
+				log("Clearing - autoclosing");
 				remoteWindow.clearTimeout(autoCloseTimer);
 			}
-			ctx.console.log("reloadRemoteWindow 1")
+			log("reloading");
 			remoteWindow.location.reload();
-			ctx.console.log("reloadRemoteWindow 2")
 			
 			ctx.setTimeout(function(){
-				ctx.console.log("reloadRemoteWindow 3")
+				log("Creating Navlet remote instance")
 			
 				var remoteNavlet = new Navlet();
 				remoteNavlet.init(remoteWindow, 
@@ -656,32 +812,48 @@
 						"masterWindow": ctx
 					}
 				);
-					
-				ctx.console.log("reloadRemoteWindow 4")
-			
 			}, 1000);
-			ctx.console.log("reloadRemoteWindow 5")
 			
 		};
 		
 		var initRemoteMode = function() {
-			masterWindow.console.log("initRemoteMode 1")
-			setTimeout(function(){	
-					 masterWindow.console.log("initRemoteMode 2")
-					 masterWindow.postMessage(ctx.performance.timing, ctx.location.href);
-					 masterWindow.console.log("initRemoteMode 3")
-					
-					autoCloseTimer = ctx.setTimeout(function(){	
-						
-						// Autoclose programmed if we lose connection 
-						// with masterWindow (could be close by the user for instance)
-						masterWindow.console.log("Connection lost - autoclosing remoteWindow");
-						ctx.close();	
-					},10000);
-					
-			},2000);
-			masterWindow.console.log("initRemoteMode 4")
 			
+			windowName = "RemoteWindow";
+			
+			log("initRemoteMode called")
+			
+			var serializedMessage,
+				autoCloseTimerDuration = 20000,
+				dataReadyPollingInterval = 500,
+				data ;
+			
+			var postData = function() {
+				
+				data = PerfData(ctx);
+				
+				if(data.isReady()) {
+					serializedMessage = PerfData(ctx).serialize();
+					//masterWindow.console.log("[RemoteWindow]: --> Sending serialized data: "+serializedMessage);
+					log(" --> Sending serialized data...");
+					masterWindow.postMessage(serializedMessage, ctx.location.href);
+				}
+				else {
+					log("Data not ready - waiting "+ dataReadyPollingInterval + "ms before posting again");
+					setTimeout(postData, dataReadyPollingInterval);
+				}
+			};
+			
+			setTimeout(postData, dataReadyPollingInterval);
+			
+			autoCloseTimer = ctx.setTimeout(function(){	
+						
+				// Autoclose programmed if we lose connection 
+				// with masterWindow (could be close by the user for instance)
+				log("Connection lost - autoclosing remoteWindow");
+				ctx.close();	
+			}, autoCloseTimerDuration);
+			
+			log("initialization done.");		
 		}
 		
 		return {
@@ -692,9 +864,6 @@
 				body = ctx.document.getElementsByTagName('body')[0];
 				head = ctx.document.getElementsByTagName('head')[0];
 								
-				// Check for support:
-				supportNavigationTimingAPI = ctx.performance ? true : false ;
-				
 				if(isSet(conf) && isSet(conf.masterWindow)) {
 					masterWindow = conf.masterWindow;
 				}
