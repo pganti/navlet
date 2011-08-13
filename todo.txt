@@ -1,12 +1,17 @@
 
-offset value for left panel of raw data
+TODO:
+
+add feature detection (querySelectorAll, localStorage, naivgation timing , addEventListener...)
+
+add custom data into data set object
+bind custom data to advanced panel
+draw custom panel on chart panel / overlay custom timers on navigation timeline chart
+redo layout engine to stick to the bottom
 draw Navigation Timeline from raw data
-overlay custom timers on navigation timeline chart
 bind hovered raw values and custom values to timeline with a timeline feedback (color, highlight)
 bind timeline to hovered raw values and custom values with a visual feedback on values
 ability to set custom delta or timers coming from business code
 reset custom values to default
-less clunky blue buttons
 about page
 monitoring panel
 update values and chart when in monitoring mode
@@ -16,3 +21,11 @@ advanced monitoring mode with eventual beacon
 check for memory leaks
 check remote window in monitor mode in order not to lost connection
 improve "no support popup" instead of default alert (in particular detect various doument for IE)
+make panel render only when perfdata is available
+
+
+DONE:
+
+create a dataset object instead of raw window.timing
+offset value for left panel of raw data
+less clunky blue buttons

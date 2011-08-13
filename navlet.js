@@ -2,6 +2,8 @@
 	
 	var navlet;
 	
+	var minimalRealisticUnixTime = 1313237533128 ;
+	
 	var AppConfig = {
 		
 		"useIframeMode": false,
@@ -158,8 +160,68 @@
 		
 		return elt;
 	}
-		
 	
+	var isValidUnixTime = function(t) {
+	
+		if(isSet(t) && t > minimalRealisticUnixTime) {
+			return true;
+		}
+		return false;
+	};
+	
+	var PerfData = function(ctx) {
+		
+		if(!isSet(ctx)) {
+			ctx = window;
+		}
+		
+		var navigationTimingData = ctx.performance.timing
+		var creationTime = new Date().getTime();
+		
+		return {
+			
+			getNavTimingData : function() {
+				
+				return navigationTimingData;
+			},
+			
+			creationTime : function() {
+			
+				return creationTime;
+			},
+			
+			isValid : function() {
+			
+				// Check if the performance object was ready when get:
+				// Basically we check that the first and last field
+				// were well set:
+				
+				if(isValidUnixTime(navigationTimingData['navigationStart']) 
+					&& 
+				   isValidUnixTime(navigationTimingData['loadEventEnd'])) {
+					return true;
+				}
+				return false;
+			}
+		}
+	}
+	
+	var PerfDataSet = function() {
+		
+		var set = [];
+		
+		return {
+			
+			addPerfData : function(perfData) {
+				
+				set.push(perfData);
+			},
+			
+			getAverages: function() {
+				return null;
+			}
+		}
+	}
 	
 	var Panel = function() {
 		
@@ -172,7 +234,7 @@
 			"top-right-panel": {}
 		}
 		
-		var generateContainer = function(html, cb) {
+		var generateContainer = function(html) {
 			
 			var elt ;
 			
@@ -272,9 +334,9 @@
 			var expanded = false;
 			
 			html.push("<div class='panel-header'>");
-			html.push("    <h1 class='panel-title'>" + title + "</h1>");
+			html.push("    <h1 class='title-font panel-title'>" + title + "</h1>");
 			
-			html.push("    <a class='panel-toggle panel-action' href='javascript:void(0)'>" + (expanded ? AppConfig.labels.Expand : AppConfig.labels.Expand) + "</a>");
+			html.push("    <a class='panel-toggle panel-action anchor-font' href='javascript:void(0)'>" + (expanded ? AppConfig.labels.Expand : AppConfig.labels.Expand) + "</a>");
 			//html.push("    <a class='panel-close panel-action' href='javascript:void(0)'>close</a>");
 			
 			html.push("</div>");
@@ -282,7 +344,7 @@
 			html.push("<div style='display:none' class='panel-content'><div class='panel-content-wrap'>");
 			html.push("</div>");
 			
-			var panelStub = generateContainer(html.join(""), function() {alert('done')});
+			var panelStub = generateContainer(html.join(""));
 			
 		};
 		
@@ -320,10 +382,11 @@
 				
 				return this;
 			},
-			
-			updateData: function(newData) {
-				data = newData ;
+			updateView: function() {
 				update();
+			},
+			updateData: function(newData) {
+				data = newData ;	
 			}
 		}
 	}
@@ -335,6 +398,8 @@
 		var panels = [];
 		var masterWindow, remoteWindow;
 		var monitorModeOn = false;
+		var rawOffsetValue = false;
+		var dockPanel, rawValuesPanel, customValuesPanel, chartPanel;
 		
 		// For remote only:
 		var autoCloseTimer = null;
@@ -376,18 +441,18 @@
 				body.appendChild(linkNode);
 				
 				
-				var data = ctx.performance.timing;
+				var data = PerfData(ctx);
 				
-				var dockPanel = Panel().init(ctx, {
+				dockPanel = Panel().init(ctx, {
 					"title" : "",
 					"domContext" : navletMainNode,
 					"panelType" : "dock-panel",
 					"template": function(data) {
 						
 						var html = [];
-						html.push("<a id='toggle-monitoring' data-global-event='toggle-monitoring' class='awesome color action' href='javascript:void(0)' >" + (monitorModeOn ? AppConfig.labels.StopMonitoring : AppConfig.labels.StartMonitoring ) + "</a>");
-						html.push("<a data-global-event='about' class='awesome color action' href='javascript:void(0)' >about</a>");
-						html.push("<a data-global-event='close-navlet' class='awesome color action' href='javascript:void(0)' >close Navlet</a>");
+						html.push("<a id='toggle-monitoring' data-global-event='toggle-monitoring' class='button color action' href='javascript:void(0)' >" + (monitorModeOn ? AppConfig.labels.StopMonitoring : AppConfig.labels.StartMonitoring ) + "</a>");
+						html.push("<a data-global-event='about' class='button color action' href='javascript:void(0)' >about</a>");
+						html.push("<a data-global-event='close-navlet' class='button color action' href='javascript:void(0)' >close Navlet</a>");
 						
 						
 						return html.join('');
@@ -395,18 +460,49 @@
 				});
 				panels.push(dockPanel);
 				
-				var rawValuePanel = Panel().init(ctx, {
+				rawValuesPanel = Panel().init(ctx, {
 					"title" : "Navigation Timing API raw values",
 					"domContext" : navletMainNode,
 					"panelType" : "top-left-panel",
 					"data": data,
 					"template" : function(data) {
 						
-						var rawListHtml = "<ul  class='list'>";
-						var tmpPropName ;
+						var storedOffsetOption = ctx.localStorage.getItem("rawOffsetValue");
+						if(storedOffsetOption != null) {
+							
+							if(storedOffsetOption == "true" || storedOffsetOption == "false") {
+								rawOffsetValue = (storedOffsetOption === 'true');
+							}
+							
+						}
+						
+						var rawOffsetOption = "<div class='option-column'>";
+						rawOffsetOption += "<input id='rawOffsetOption' data-global-event='offset-raw-values' class='action' type='checkbox' " + (rawOffsetValue ? "checked='yes'" : "" )  + " />"
+						rawOffsetOption += "<label for='rawOffsetOption' >Offset raw values with navigationStart value</label>";
+						rawOffsetOption += "</div>";
+						
+						var rawListHtml = rawOffsetOption + "<ul  class='list'>";
+						var tmpPropName, value, NA ;
+						
+						var offset = 0;
+						if(rawOffsetValue) {
+							offset = data.getNavTimingData()["navigationStart"];
+						}
+						
 						for(var i=0, l=AppConfig.NavTimingProperties.length; i<l; i++) {
-							tmpPropName = AppConfig.NavTimingProperties[i].name
-							rawListHtml += "<li class='entry'><span class='entry-label'>"+ tmpPropName +"</span><span class='entry-value'>"+data[tmpPropName] + "</span></li>"
+							tmpPropName = AppConfig.NavTimingProperties[i].name;
+							value = data.getNavTimingData()[tmpPropName];
+							
+							NA = "";
+							if(!isValidUnixTime(value)) {
+								value = "NA";
+								NA = " na";
+							}
+							else {
+								value = value - offset;
+							}
+							
+							rawListHtml += "<li class='entry "+ NA +"'><span class='entry-label'>"+ tmpPropName +"</span><span class='entry-value'>"+value + "</span></li>"
 						}
 						   
 						rawListHtml += "</ul>";
@@ -414,9 +510,9 @@
 						return rawListHtml;
 					}
 				});
-				panels.push(rawValuePanel);
+				panels.push(rawValuesPanel);
 				
-				var advValuePanel = Panel().init(ctx, {
+				customValuesPanel = Panel().init(ctx, {
 					"title" : "User defined metrics",
 					"domContext" : navletMainNode,
 					"panelType" : "top-right-panel",
@@ -424,31 +520,33 @@
 					"template" : function(data) {
 						
 						var advList = "<ul class='list'>";
-				
+						
+						var navData = data.getNavTimingData();
+						
 						function addItemToAdvList(key, value) {
 							advList += "<li class='entry'><span class='entry-label'>"+key+"</span><span class='entry-value'>"+value + "</span></li>";
 						}
 						
-						addItemToAdvList("responseStart - navigationTime", (data.responseStart - data.navigationStart));
+						addItemToAdvList("responseStart - navigationTime", (navData.responseStart - navData.navigationStart));
 						
-						addItemToAdvList("connection duration", (data.connectEnd - data.connectStart));
-						addItemToAdvList("domLoading - responseStart", (data.domLoading - data.responseStart));
-						addItemToAdvList("domInteractive - responseStart", (data.domInteractive - data.responseStart));
+						addItemToAdvList("connection duration", (navData.connectEnd - navData.connectStart));
+						addItemToAdvList("domLoading - responseStart", (navData.domLoading - navData.responseStart));
+						addItemToAdvList("domInteractive - responseStart", (navData.domInteractive - navData.responseStart));
 						
-						addItemToAdvList("domContentLoadedEventStart - responseStart", (data.domContentLoadedEventStart - data.responseStart));
-						addItemToAdvList("domReadyEvent duration", (data.domContentLoadedEventEnd - data.domContentLoadedEventStart));
+						addItemToAdvList("domContentLoadedEventStart - responseStart", (navData.domContentLoadedEventStart - navData.responseStart));
+						addItemToAdvList("domReadyEvent duration", (navData.domContentLoadedEventEnd - navData.domContentLoadedEventStart));
 						
-						addItemToAdvList("loadEventStart - responseStart", (data.loadEventStart - data.responseStart));
-						addItemToAdvList("loadEvent duration", (data.loadEventEnd - data.loadEventStart));
+						addItemToAdvList("loadEventStart - responseStart", (navData.loadEventStart - navData.responseStart));
+						addItemToAdvList("loadEvent duration", (navData.loadEventEnd - navData.loadEventStart));
 						
 						advList += "</ul>";
 						
 						return advList;
 					}
 				});
-				panels.push(advValuePanel);
+				panels.push(customValuesPanel);
 				
-				var chartPanel = Panel().init(ctx, {
+				chartPanel = Panel().init(ctx, {
 					"title" : "Timeline representation",
 					"domContext" : navletMainNode,
 					"panelType" : "bottom-panel",
@@ -479,6 +577,7 @@
 					
 					for(var i=0; i<panels.length; i++) {
 						panels[i].updateData(e.data);
+						panels[i].updateView();
 					}
 					reloadRemoteWindow();
 			
@@ -627,6 +726,12 @@
 				else if(actionName == "close-navlet") {
 					stopMonitorMode();
 					clean();
+				}
+				else if(actionName == "offset-raw-values") {
+					rawOffsetValue = !rawOffsetValue;
+					ctx.localStorage.setItem("rawOffsetValue", ""+rawOffsetValue);
+					
+					rawValuesPanel.updateView();
 				}
 				else {
 					alert("no action mapped: " + actionName)
