@@ -458,7 +458,21 @@
 			
 		// Flag used at template level to know 
 		// if they handle a single PerfData or a PerfDataSet objetct:
-		"isDataCollection": true
+		"isDataCollection": true,
+		
+		"hasSparklineData" : true,
+		
+		getSparklineData: function(key) {
+		
+			var tony = []
+		
+			for(var i=0; i< this._set.length;i ++) {
+				
+				tony.push(this._set[i].query(key) - this._set[i].query("performance.timing.navigationStart"));
+			}
+			
+			return "<span class='sparkline' style='display:none'>" + tony.join(",") + "</span>";
+		}
 	};
 	
 	
@@ -707,9 +721,10 @@
 		var displayNoSupportMessage = function () {
 				
 				var msg = "Your browser does not support some needed JavaScript APIs.\n\n";
-				msg += "The following list of features is not supported: "+unsupportedFeatures.join(", ")+".\n\n";
-				msg += "Please use IE9 (check your document mode in developer ) or an up to date Google Chrome.\n";
+				msg += "The following list of features is not supported: "+unsupportedFeatures.join(", ")+"\n\n";
+				msg += "Please use an up to date Google Chrome or IE9+.\n\n If you're using IE9, make check sure that your 'document mode' is set to 'IE9 standards' in the developer tool console (F12).\n";
 				alert(msg);
+				ctx.document.getElementById('navlet-loader').innerHTML = msg.replace(/\n\n/g,"<br/>");
 		};
 			
 		
@@ -914,7 +929,6 @@
 						var tlfd = ctx.document.getElementById("timeline-scale-feedback");
 						var ts = ctx.document.getElementById("timeline-scale");
 						var tc = ctx.document.getElementById("time-cursor");
-						var tvl = ctx.document.getElementById("time-vert-line");
 						
 						function getNumericStyleProperty(style, prop){
 							return parseInt(style.getPropertyValue(prop),10) ;
@@ -948,14 +962,20 @@
 						addEvent(ts, "mousemove", function(evt) {
 							tc.innerHTML = Math.floor((evt.clientX-ts_pos.x) * ((data.query("performance.timing.loadEventEnd") - data.query("performance.timing.navigationStart"))/ctx.document.querySelectorAll('#bottom-panel-id .panel-content-wrap')[0].offsetWidth)) + "ms"
 							tlfd.style.left = (evt.clientX-ts_pos.x) + "px";
-							vline.style.left = (evt.clientX-ts_pos.x) + "px";
 						});
+						
+						if(ctx.document.querySelectorAll('#bottom-panel-id .sparkline')[0])
+							sparkline(ctx.document.querySelectorAll('#bottom-panel-id .sparkline')[0]);
+						
 					},
 					"template" : function(data) {
 						
+						// Forcing padding here since we have race conditions between CSS padding style and javascript reader of the offsetWidth property
+						ctx.document.querySelectorAll('#bottom-panel-id .panel-content')[0].style.padding = "0 80px";
+						
 						var initialTime = data.query("performance.timing.navigationStart"),
 							DT = data.query("performance.timing.loadEventEnd") - data.query("performance.timing.navigationStart"),
-							availableWidthInPixel = ctx.document.querySelectorAll('#bottom-panel-id .panel-content-wrap')[0].offsetWidth, // - 160,
+							availableWidthInPixel = ctx.document.querySelectorAll('#bottom-panel-id .panel-content-wrap')[0].offsetWidth,
 							widthPerc, leftMargin,
 							positionContextClass;
 						
@@ -1000,6 +1020,10 @@
 							htmlArray.push("<div class='timeline-block-flag end none'><div class='link-to-bar shadow'></div><div class='timeline-block-label font shadow'>"+ timelineBlockConf.endEventName +":  " +(timelineBlockConf.endEventValue - initialTime)+ "ms</div></div>");
 							htmlArray.push("<div class='timeline-block-flag middle none'><div class='link-to-bar shadow'></div><div class='timeline-block-label font shadow'>"+  timelineBlockConf.timelineName +":  " +(timelineBlockConf.endEventValue - timelineBlockConf.startEventValue)+ "ms</div></div>");
 							
+							if(data.hasSparklineData) {
+							
+								htmlArray.push(data.getSparklineData("performance.timing.domContentLoadedEventStart"));
+							}
 							
 							htmlArray.push("</div>");	
 						};
