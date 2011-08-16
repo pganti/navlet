@@ -35,7 +35,7 @@
 		},
 		
 		"timers": {
-			"autoCloseTimerDuration" : 5000,
+			"autoCloseTimerDuration" : 60000,
 			"dataReadyPollingInterval": 500
 		},	
 
@@ -181,6 +181,43 @@
 		return stringToTrim.replace(/\s+$/,"");
 	}
 	
+	var queryObject = function(dataObj, queryKey, value) {
+		
+		var retValue, keyPath, dataObj;
+		
+		if(typeof(queryKey) == 'string') {
+			
+			keyPath = queryKey.split('.');
+			try {
+			
+				for(var i=0; i<keyPath.length; i++) {
+					
+					dataObj = dataObj[keyPath[i]];
+				}
+			}
+			catch(ex) {
+				throw "[queryObject] Issue when querying PerfData object with key <" + queryKey+ ">";
+				console.log(this._data);
+				console.log(ex);
+			}
+			
+			if(arguments.length == 3) { 
+				// Setter mode:
+				dataObj = value;
+			}
+			else {
+				// getter mode:
+				return dataObj;
+			}
+		}
+		else {
+			throw('[queryObject] Bad key format to query/set PerfData. queryKey: <' + queryKey +'> on following object:');
+			console.log(dataObj);
+		}
+		
+		return retValue
+	}
+	
 	var hasClass = function(elt, className) {
 	
 		var classes = elt.className;
@@ -240,11 +277,13 @@
 		return false;
 	};
 	
+	var isValidDeltaTime = function(t) {
 	
-	
-	
-	
-	
+		if(isSet(t) && t >=0) {
+			return true;
+		}
+		return false;
+	};
 	
 	var PerfData = function(ctx) {
 		
@@ -269,62 +308,15 @@
 	
 	PerfData.prototype = {
 	
-		/**
-		* @private
-		*/
-		_queryData : function(queryKey, value) {
 		
-			var retValue, keyPath, dataObj = this._data;
-			if(typeof(queryKey) == 'string') {
-				
-				keyPath = queryKey.split('.');
-				try {
-				
-					for(var i=0; i<keyPath.length; i++) {
-						
-						dataObj = dataObj[keyPath[i]];
-					}
-				}
-				catch(ex) {
-					throw "[PerfData] Issue when querying PerfData object with key <" + queryKey+ ">";
-					console.log(this._data);
-					console.log(ex);
-				}
-				
-				if(arguments.length > 1) { 
-					// Setter mode:
-					dataObj = value;
-				}
-				else {
-					// getter mode:
-					return dataObj;
-				}
-			}
-			else {
-				throw('[PerfData] Bad key format to query/set PerfData. queryKey: <' + queryKey +'>');
-			}
+		query : function(queryKey) {
 			
-			return retValue
-		},
-		
-		query : function(queryKey, normalized) {
-			
-			return (normalized) ? this._queryData(queryKey) - this._data.timeReference :  this._queryData(queryKey) ;
+			return queryObject(this._data, queryKey) ;
 		},
 		
 		set : function(queryKey, value) {
 		
-			this._queryData(queryKey, value);
-		},
-		
-		queryNav : function(queryKey, normalized) {
-			
-			return (normalized) ? this._queryData("performance.timing." + queryKey) - this._data.timeReference:  this._queryData("performance.timing." + queryKey) ;
-		},
-		
-		setNav : function(queryKey, value) {
-		
-			this._queryData("performance.timing." + queryKey, value);
+			queryObject(this._data, queryKey, value);
 		},
 		 
 		serialize : function() {
@@ -336,20 +328,10 @@
 			
 			if(typeof(data)=='string') {
 				
-				// Possibly a serialied JSON object:
+				// Possibly a serialized JSON object:
 				data = this._ctx.JSON.parse(data);
 			}
 			this._data = data;
-		},
-		
-		getNormalizedData : function() {
-		
-			if(!this.ready()) {
-				throw "[PerfData]: Can't get normalized data if PerfData object is not ready !"
-			}
-			
-			
-			
 		},
 		
 		getRawData : function() {
@@ -362,25 +344,61 @@
 			// Check if the performance object was ready when get:
 			// Basically we check that the first and last field
 			// were well set:
-			if(isValidUnixTime(this.queryNav('navigationStart')) 
+			if(isValidUnixTime(this.query('performance.timing.navigationStart')) 
 				&& 
-			   isValidUnixTime(this.queryNav('loadEventEnd'))) {
+			   isValidUnixTime(this.query('performance.timing.loadEventEnd'))) {
 				return true;
 			}
 			return false;
 		}
 	}
 	
-	var PerfDataSet = function() {
+	PerfDataSet = function() {
 		
-		var set = [];
-		var nRecord = 0;
+		this._set = [];
+		this._nRecord = 0;
 		//var minRecordTime = Infinity;
 		//var maxRecordTime = 0;
 		
-		var averageData = null;
+		this._aggregatedData = null;
+	
+	};
+	
+	PerfDataSet.prototype = {
+	
+		/**
+		*
+		* @private
+		*/
+		_processJson : function (src, tgt, cb) {
+			
+			if(typeof(cb) == 'undefined') {
+				// callback not defined, the processor will do nothing
+				// beside copying the 'src' properties/values into the 'tgt' object
+				cb = function(x) {return x;};
+			}
+			for(var k in src) {
+				if (src.hasOwnProperty(k)) {
+					if(typeof(src[k])=='object') {
+					
+						if(typeof(tgt[k]) == 'undefined') {
+							tgt[k] = {};
+						}
+						this._processJson(src[k], tgt[k], cb);
+					}
+					else {
+						
+						tgt[k] = cb(src[k], tgt[k]);
+					}
+				}
+			}
+		},
 		
-		var aggregateData = function(newData) {
+		/**
+		*
+		* @private
+		*/
+		_aggregateData : function(newData) {
 		
 			/*
 			if(newData.creationTime < minRecordTime) {
@@ -391,68 +409,58 @@
 			}*/
 			
 			var shiftNewData = {};
-			processJson(newData.getRawData(), shiftNewData, function(x,y) {debugger;return x - newData.queryNav("navigationStart")});
-			
-
-			
-			if(averageData == null) {
+			this._processJson(newData.getRawData(), shiftNewData, function(nData, emptyObj) {
 				
-				averageData = shiftNewData;
+				// Shifting values with navigationStart value:
+				return nData - newData.query("performance.timing.navigationStart")
+			});
+			
+			// Cleaning meaningless information:
+			delete shiftNewData.creationTime ;
+
+			if(this._aggregatedData == null) {
+				
+				this._aggregatedData = shiftNewData;
 			}
 			else {
 				
-				processJson(newData.getRawData(), shiftNewData, function(x, y) {
-				
-					debugger;
-					return x - y;
+				var self = this;
+				this._processJson(shiftNewData, this._aggregatedData, function(nData, avgData) {
+					
+					return Math.floor((avgData * self._nRecord + nData)/(self._nRecord + 1));
 				});
 			}
-		}
+			
+			this._nRecord++;
+		},
 		
-		var processJson = function (_obj, _copy, cb) {
+		getRecordCount : function() {
 			
-			if(typeof(cb) == 'undefined')
-				cb = function(x) {return x;};
+			return this._nRecord;
+		},
 			
-			for(var k in _obj) {
-				if(typeof(_obj[k])=='object') {
-				
-					if(typeof(_copy[k]) == 'undefined') 
-						_copy[k] = {};
-					processJson(_obj[k], _copy[k], cb);
-				}
-				else {
-					
-					_copy[k] = cb(_obj[k], _copy[k]);
-				}
+		addPerfData : function(perfData) {
+			
+			if(perfData.isReady()) {
+				this._set.push(perfData);
+				this._aggregateData(perfData);
 			}
-		}
+			else {
+				throw "[PerfDataSet]: Trying to add an invalid PerfData object.";
+				log(perfData);
+			}
+		},
 		
-		return {
-			"getRecordCount" : function() {
+		query: function(key) {
+		
+			return queryObject(this._aggregatedData, key);
+		},
 			
-				return nRecord;
-			},
-			
-			"addPerfData" : function(perfData) {
-				if(perfData.isReady()) {
-					nRecord++;
-					set.push(perfData);
-					aggregateData(perfData);
-				}
-				else {
-					throw "[PerfDataSet]: Trying to add an invalid PerfData object.";
-					log(perfData);
-				}
-			},
-			
-			
-			// Flag used at template level to know 
-			// if they handle a single PerfData or a PerfDataSet objetct:
-			"isAggregated": true
-			
-		}
-	}
+		// Flag used at template level to know 
+		// if they handle a single PerfData or a PerfDataSet objetct:
+		"isDataCollection": true
+	};
+	
 	
 	var Panel = function() {
 		
@@ -561,6 +569,11 @@
 					}
 				})());
 			}
+			
+			if(afterCreate) {
+				
+				afterCreate(data);
+			}
 		}
 		
 		var buildPanel = function() {
@@ -595,6 +608,8 @@
 					if(!isSet(predefinedPanels[panelType])) {
 						error("Panel type not well defined")
 					}
+					
+					afterCreate = jsonConf.afterCreate;
 					
 					data = jsonConf.data;
 					if(!isSet(data)) {
@@ -761,29 +776,29 @@
 					"title" : "",
 					"domContext" : navletMainNode,
 					"panelType" : "dock-panel",
+					"data": data,
 					"template": function(data) {
 						
 						var html = [];
 						
-						if(monitorModeOn) {
+						if(monitorModeOn) { // if(data.isDataCollection) {
 							
-							html.push("<a id='toggle-monitoring' data-global-event='toggle-monitoring' class='monitoring-on navlet-button color action' href='javascript:void(0)' >" +  AppConfig.labels.StopMonitoring  + "</a>");
+							html.push("<a id='toggle-monitoring' data-global-event='toggle-monitoring' title='Click to stop monitoring of this page' class='monitoring-on navlet-button color action' href='javascript:void(0)' >" +  AppConfig.labels.StopMonitoring  + "</a>");
 							html.push("<div class='monitor-feedback-panel'>");
 							
-							html.push("Samples:" + dataSet.getRecordCount());
-							html.push("<a>focus remoteWindow</a>");// + dataSet.getRecordCount());
-							html.push("<a>export data</a>");// + dataSet.getRecordCount());
-							html.push("<a>help</a>");// + dataSet.getRecordCount());
-							html.push("<a>reset</a>");
+							html.push("<a												class='navlet-button-action' 				href='javascript:void(0)'>Samples: " + dataSet.getRecordCount() + "</a>");
+							html.push("<a title='Click to bring monitoring window to foreground' data-global-event='focus-remote-window' 				class='navlet-button-action action' 		href='javascript:void(0)'>Focus monitor window</a>");
+							html.push("<a title='Click to export monitoring data to aa serialized JSON' data-global-event='export-monitoring-data' 	class='navlet-button-action action' 		href='javascript:void(0)'>Export data</a>");
+							html.push("<a data-global-event='reset-monitoring' 			class='navlet-button-action last action' 	href='javascript:void(0)'>Reset</a>");
 							
 							html.push("</div>");
 						}
 						else {
 						
-							html.push("<a id='toggle-monitoring' data-global-event='toggle-monitoring' class='navlet-button color action' href='javascript:void(0)' >" + AppConfig.labels.StartMonitoring + "</a>");
+							html.push("<a id='toggle-monitoring' title='Click to start monitoring of the current page' data-global-event='toggle-monitoring' class='navlet-button color action' href='javascript:void(0)' >" + AppConfig.labels.StartMonitoring + "</a>");
 						}
 						html.push("<a data-global-event='about' class='navlet-button color action' href='javascript:void(0)' >about</a>");
-						html.push("<a data-global-event='close-navlet' class='navlet-button color action' href='javascript:void(0)' >close Navlet</a>");
+						html.push("<a data-global-event='close-navlet' title='Click to close the NAvlet and return to the background page' class='navlet-button color action' href='javascript:void(0)' >close Navlet</a>");
 						
 						
 						return html.join('');
@@ -800,24 +815,50 @@
 						
 						var storedOffsetOption = getOffsetRawValuesOption()
 						
-						var rawOffsetOption = "<div class='option-column'>";
+						var rawOffsetOption = "";
+						
+						rawOffsetOption = "<div class='option-column'>";
 						rawOffsetOption += "<input id='rawOffsetOption' data-global-event='offset-raw-values' class='action' type='checkbox' " + (rawOffsetValue ? "checked='yes'" : "" )  + " />"
 						rawOffsetOption += "<label class='font' for='rawOffsetOption' >Offset raw values with navigationStart value</label>";
+						
+						if(data.isDataCollection) {
+							
+							rawOffsetOption += "<div class='option-disabler' title='Absolute UNIX time values are not available in monitoring mode.'></div>";				
+						}
+						
 						rawOffsetOption += "</div>";
 						
+						
 						var rawListHtml = rawOffsetOption + "<ul  class='list'>";
-						var tmpPropName, value, NA ;
+						var tmpPropName, value, NA, navStartTime ;
 						
-						
+						navStartTime = data.query( "performance.timing.navigationStart")
 						
 						for(var i=0, l=AppConfig.NavTimingProperties.length; i<l; i++) {
 							tmpPropName = AppConfig.NavTimingProperties[i].name;
-							value = data.queryNav(tmpPropName, rawOffsetValue);
+							value = data.query( "performance.timing." + tmpPropName);
 							
 							NA = "";
-							if(!isValidUnixTime(value)) {
-								value = "NA";
-								NA = " na";
+							
+							
+							
+							// TODO: Move this sniffing into domain class PerfData & PerfDataSet
+							if(data.isDataCollection) {
+								
+								if(!isValidDeltaTime(value)) {
+									value = "NA";
+									NA = " na";
+								}
+							}
+							else {
+								
+								if(!isValidUnixTime(value)) {
+									value = "NA";
+									NA = " na";
+								}
+								if(rawOffsetValue) {
+									value = value - navStartTime;
+								}
 							}
 							
 							rawListHtml += "<li class='entry "+ NA +"'><span class='entry-label row-font'>"+ tmpPropName +"</span><span class='entry-value row-font'>"+value + "</span></li>"
@@ -843,17 +884,17 @@
 							advList += "<li class='entry'><span class='entry-label row-font'>"+key+"</span><span class='entry-value row-font'>"+value + "</span></li>";
 						}
 						
-						addItemToAdvList("responseStart - navigationTime", (data.queryNav("responseStart") - data.queryNav("navigationStart")));
+						addItemToAdvList("responseStart - navigationTime", (data.query("performance.timing.responseStart") - data.query("performance.timing.navigationStart")));
 						
-						addItemToAdvList("connection duration", (data.queryNav("connectEnd") - data.queryNav("connectStart")));
-						addItemToAdvList("domLoading - responseStart", (data.queryNav("domLoading") - data.queryNav("responseStart")));
-						addItemToAdvList("domInteractive - responseStart", (data.queryNav("domInteractive") - data.queryNav("responseStart")));
+						addItemToAdvList("connection duration", (data.query("performance.timing.connectEnd") - data.query("performance.timing.connectStart")));
+						addItemToAdvList("domLoading - responseStart", (data.query("performance.timing.domLoading") - data.query("performance.timing.responseStart")));
+						addItemToAdvList("domInteractive - responseStart", (data.query("performance.timing.domInteractive") - data.query("performance.timing.responseStart")));
 						
-						addItemToAdvList("domContentLoadedEventStart - responseStart", (data.queryNav("domContentLoadedEventStart") - data.queryNav("responseStart")));
-						addItemToAdvList("domReadyEvent duration", (data.queryNav("domContentLoadedEventEnd") - data.queryNav("domContentLoadedEventStart")));
+						addItemToAdvList("domContentLoadedEventStart - responseStart", (data.query("performance.timing.domContentLoadedEventStart") - data.query("performance.timing.responseStart")));
+						addItemToAdvList("domReadyEvent duration", (data.query("performance.timing.domContentLoadedEventEnd") - data.query("performance.timing.domContentLoadedEventStart")));
 						
-						addItemToAdvList("loadEventStart - responseStart", (data.queryNav("loadEventStart") - data.queryNav("responseStart")));
-						addItemToAdvList("loadEvent duration", (data.queryNav("loadEventEnd") - data.queryNav("loadEventStart")));
+						addItemToAdvList("loadEventStart - responseStart", (data.query("performance.timing.loadEventStart") - data.query("performance.timing.responseStart")));
+						addItemToAdvList("loadEvent duration", (data.query("performance.timing.loadEventEnd") - data.query("performance.timing.loadEventStart")));
 						
 						advList += "</ul>";
 						
@@ -868,19 +909,63 @@
 					"panelType" : "bottom-panel",
 					"data": data,
 					"layoutClass" : "bottom-panel-open",
+					"afterCreate": function(data) {
+					
+						var tlfd = ctx.document.getElementById("timeline-scale-feedback");
+						var ts = ctx.document.getElementById("timeline-scale");
+						var tc = ctx.document.getElementById("time-cursor");
+						var tvl = ctx.document.getElementById("time-vert-line");
+						
+						function getNumericStyleProperty(style, prop){
+							return parseInt(style.getPropertyValue(prop),10) ;
+						}
+
+						function element_position(e) {
+							var x = 0, y = 0;
+							var inner = true ;
+							do {
+								x += e.offsetLeft;
+								y += e.offsetTop;
+								var style = getComputedStyle(e,null) ;
+								var borderTop = getNumericStyleProperty(style,"border-top-width") ;
+								var borderLeft = getNumericStyleProperty(style,"border-left-width") ;
+								y += borderTop ;
+								x += borderLeft ;
+								if (inner){
+								  var paddingTop = getNumericStyleProperty(style,"padding-top") ;
+								  var paddingLeft = getNumericStyleProperty(style,"padding-left") ;
+								  y += paddingTop ;
+								  x += paddingLeft ;
+								}
+								inner = false ;
+							} while (e = e.offsetParent);
+							return { x: x, y: y };
+						}
+						
+						var ts_pos = element_position(ts);
+						
+						
+						addEvent(ts, "mousemove", function(evt) {
+							tc.innerHTML = Math.floor((evt.clientX-ts_pos.x) * ((data.query("performance.timing.loadEventEnd") - data.query("performance.timing.navigationStart"))/ctx.document.querySelectorAll('#bottom-panel-id .panel-content-wrap')[0].offsetWidth)) + "ms"
+							tlfd.style.left = (evt.clientX-ts_pos.x) + "px";
+							vline.style.left = (evt.clientX-ts_pos.x) + "px";
+						});
+					},
 					"template" : function(data) {
 						
-						var initialTime = data.queryNav("navigationStart"),
-							DT = data.queryNav("loadEventEnd") - data.queryNav("navigationStart"),
-							availableWidthInPixel = ctx.document.querySelectorAll('#bottom-panel-id .panel-content-wrap')[0].offsetWidth - 160,
+						var initialTime = data.query("performance.timing.navigationStart"),
+							DT = data.query("performance.timing.loadEventEnd") - data.query("performance.timing.navigationStart"),
+							availableWidthInPixel = ctx.document.querySelectorAll('#bottom-panel-id .panel-content-wrap')[0].offsetWidth, // - 160,
 							widthPerc, leftMargin,
 							positionContextClass;
 						
+						//console.log("availableWidthInPixel" + availableWidthInPixel)
+							
 
 						var buildTimelineBlock = function(htmlArray, timelineBlockConf) {
 							pixelWidth = Math.floor(availableWidthInPixel*(timelineBlockConf.endEventValue - timelineBlockConf.startEventValue)/DT);
 							leftMargin = Math.floor(availableWidthInPixel*(timelineBlockConf.startEventValue - initialTime)/DT)
-							
+							//console.log("pixelWidth" + pixelWidth)
 							if(pixelWidth == 0) {
 								return;
 							}
@@ -927,41 +1012,41 @@
 											"cssClass" : "chart-navBlock",
 											"timelineName" : "NAV",
 											"startEventName" : "navigationStart",
-											"startEventValue" : data.queryNav("navigationStart"),
+											"startEventValue" : data.query("performance.timing.navigationStart"),
 											"endEventName" : "fetchStart",
-											"endEventValue" : data.queryNav("fetchStart")
+											"endEventValue" : data.query("performance.timing.fetchStart")
 										},
 										{
 											"cssClass" : "chart-dnsBlock",
 											"timelineName" : "DNS",
 											"startEventName" : "domainLookupStart",
-											"startEventValue" : data.queryNav("domainLookupStart"),
+											"startEventValue" : data.query("performance.timing.domainLookupStart"),
 											"endEventName" : "domainLookupEnd",
-											"endEventValue" : data.queryNav("domainLookupEnd")
+											"endEventValue" : data.query("performance.timing.domainLookupEnd")
 										},
 										{
 											"cssClass" : "chart-TCPBlock",
 											"timelineName" : "TCP",
 											"startEventName" : "connectStart",
-											"startEventValue" : data.queryNav("connectStart"),
+											"startEventValue" : data.query("performance.timing.connectStart"),
 											"endEventName" : "connectEnd",
-											"endEventValue" : data.queryNav("connectEnd")
+											"endEventValue" : data.query("performance.timing.connectEnd")
 										},
 										{
 											"cssClass" : "chart-requestBlock",
 											"timelineName" : "REQ",
 											"startEventName" : "requestStart",
-											"startEventValue" : data.queryNav("requestStart"),
+											"startEventValue" : data.query("performance.timing.requestStart"),
 											"endEventName" : "responseStart",
-											"endEventValue" : data.queryNav("responseStart")
+											"endEventValue" : data.query("performance.timing.responseStart")
 										},
 										{
 											"cssClass" : "chart-responseBlock",
-											"timelineName" : "REP",
+											"timelineName" : "RESP",
 											"startEventName" : "responseStart",
-											"startEventValue" : data.queryNav("responseStart"),
+											"startEventValue" : data.query("performance.timing.responseStart"),
 											"endEventName" : "responseEnd",
-											"endEventValue" : data.queryNav("responseEnd")
+											"endEventValue" : data.query("performance.timing.responseEnd")
 										}
 									]
 								},
@@ -970,35 +1055,35 @@
 									values : [
 										{
 											"cssClass" : "chart-domReady",
-											"timelineName" : "DOM READY",
+											"timelineName" : "FBT TO DOMREADY",
 											"startEventName" : "domLoading",
-											"startEventValue" : data.queryNav("domLoading"),
+											"startEventValue" : data.query("performance.timing.domLoading"),
 											"endEventName" : "domContentLoadedEventStart",
-											"endEventValue" : data.queryNav("domContentLoadedEventStart")
+											"endEventValue" : data.query("performance.timing.domContentLoadedEventStart")
 										},
 										{
 											"cssClass" : "chart-domReadyDuration",
-											"timelineName" : "DOM READY DURATION",
+											"timelineName" : "DOMREADY DURATION",
 											"startEventName" : "domContentLoadedEventStart",
-											"startEventValue" : data.queryNav("domContentLoadedEventStart"),
+											"startEventValue" : data.query("performance.timing.domContentLoadedEventStart"),
 											"endEventName" : "domContentLoadedEventEnd",
-											"endEventValue" : data.queryNav("domContentLoadedEventEnd")
+											"endEventValue" : data.query("performance.timing.domContentLoadedEventEnd")
 										},
 										{
 											"cssClass" : "chart-domReadyToLoad",
-											"timelineName" : "DOM READY-LOAD",
+											"timelineName" : "DOMREADY TO LOAD",
 											"startEventName" : "domContentLoadedEventEnd",
-											"startEventValue" : data.queryNav("domContentLoadedEventEnd"),
+											"startEventValue" : data.query("performance.timing.domContentLoadedEventEnd"),
 											"endEventName" : "domComplete",
-											"endEventValue" : data.queryNav("domComplete")
+											"endEventValue" : data.query("performance.timing.domComplete")
 										},
 										{
 											"cssClass" : "chart-loadEventDuration",
-											"timelineName" : "DOM LOAD DURATION",
+											"timelineName" : "LOAD DURATION",
 											"startEventName" : "loadEventStart",
-											"startEventValue" : data.queryNav("loadEventStart"),
+											"startEventValue" : data.query("performance.timing.loadEventStart"),
 											"endEventName" : "loadEventEnd",
-											"endEventValue" : data.queryNav("loadEventEnd")
+											"endEventValue" : data.query("performance.timing.loadEventEnd")
 										}
 									]
 								}	
@@ -1007,9 +1092,13 @@
 						
 						var chartHtml = [];
 						
-						chartHtml.push("<div class='timeline-scale'>");
+						chartHtml.push("<div id='timeline-scale' class='timeline-scale reveal'>");
+						
+						chartHtml.push("<div id='timeline-scale-feedback' class='none'>");
+						chartHtml.push("<div id='time-cursor' class=''></div>");
+						chartHtml.push("<div id='time-vert-line' class=''></div>");
 	
-						chartHtml.push("</div>");
+						chartHtml.push("</div></div>");
 						
 						chartHtml.push("<div id='rawValuesChart' class='rawValuesChart'>");
 						
@@ -1061,7 +1150,7 @@
 		var startMonitorMode = function() {
 			
 			monitorModeOn = true;
-			dataSet = PerfDataSet();
+			dataSet = new PerfDataSet();
 			// Attach event handler to receive data from remote windows:
 			ctx.addEventListener("message", onPostMessageReceived, false);
 			
@@ -1118,6 +1207,11 @@
 			
 		};
 		
+		var focusRemoteWindow = function() {
+			
+			remoteWindow.focus();
+		};
+		
 		var reloadRemoteWindow = function() {
 			
 			if(autoCloseTimer != null) {
@@ -1128,7 +1222,7 @@
 			log("reloading");
 			remoteWindow.location.reload();
 			
-		//	remoteWindow.setTimeout(function(){
+			masterWindow.setTimeout(function(){
 				log("Creating Navlet remote instance")
 			
 				var remoteNavlet = new Navlet();
@@ -1138,16 +1232,17 @@
 						"masterWindow": ctx
 					}
 				);
-		//	}, 1000);
-			
-			autoCloseTimer = remoteWindow.setTimeout(function(){	
-						
-				// Autoclose programmed if we lose connection 
-				// with masterWindow (could be close by the user for instance)
-				log("Connection lost - autoclosing remoteWindow");
-				remoteWindow.close();	
-			}, AppConfig.timers.autoCloseTimerDuration);
-			
+				
+				
+				autoCloseTimer = remoteWindow.setTimeout(function(){	
+							
+					// Autoclose programmed if we lose connection 
+					// with masterWindow (could be close by the user for instance)
+					log("Connection lost - autoclosing remoteWindow");
+					remoteWindow.close();	
+				}, AppConfig.timers.autoCloseTimerDuration);
+				
+			}, 1000); // TODO: find a better way to handle 'reload load event' (breaking on IE without setTimeout)
 		};
 		
 		var initRemoteMode = function() {
@@ -1170,7 +1265,7 @@
 					masterWindow.postMessage(serializedMessage, ctx.location.href);
 				}
 				else {
-					log("Data not ready - waiting "+ AppConfig.timers.dataReadyPollingInterval + "ms before posting again");
+					log("Data not ready - waiting "+ AppConfig.timers.dataReadyPollingInterval + "ms before probing data again");
 					setTimeout(postData,  AppConfig.timers.dataReadyPollingInterval);
 				}
 			};
@@ -1179,20 +1274,6 @@
 			
 			log("initialization done.");		
 		}
-		
-		var disableRawOffset = function() {
-				
-			rawOffsetValue = true;
-			document.getElementById('rawOffsetOption').setAttribute('disabled', 'disabled');
-			rawValuesPanel.updateView();
-		};
-		
-		var enableRawOffset = function() {
-			
-			document.getElementById('rawOffsetOption').removeAttribute('disabled');
-			rawValuesPanel.updateView();
-		};
-			
 		
 		return {
 			init: function(context, conf) {
@@ -1223,11 +1304,9 @@
 			
 				if(actionName == "toggle-monitoring") {
 					if(monitorModeOn) {
-						disableRawOffset();
 						stopMonitorMode();
 					}
 					else {
-						disableRawOffset();
 						startMonitorMode();
 					}
 					dockPanel.updateView();
@@ -1242,6 +1321,9 @@
 					
 					rawValuesPanel.updateView();
 				}
+				else if(actionName == "focus-remote-window") {
+					focusRemoteWindow();
+				}
 				else {
 					alert("no action mapped: " + actionName)
 				}
@@ -1249,6 +1331,68 @@
 			}
 		}
 	};
+	
+	/**
+	
+		http://ejohn.org/projects/jspark/
+	*/
+	function sparkline(o) {
+	  var p = o.innerHTML.split(',');
+	  while ( o.childNodes.length > 0 )
+		o.removeChild( o.firstChild );
+
+	  var nw = "auto";
+	  var nh = "auto";
+	  if ( window.getComputedStyle ) {
+		nw = window.getComputedStyle( o, null ).width;
+		nh = window.getComputedStyle( o, null ).height;
+	  }
+
+	  if ( nw != "auto" ) nw = nw.substr( 0, nw.length - 2 );
+	  if ( nh != "auto" ) nh = nh.substr( 0, nh.length - 2 );
+
+	  var f = 2;
+	  var w = ( nw == "auto" || nw == 0 ? p.length * f : nw - 0 );
+	  var h = ( nh == "auto" || nh == 0 ? "1em" : nh );
+
+	  var co = document.createElement("canvas");
+
+	  if ( co.getContext ) o.style.display = 'inline';
+	  else return false;
+
+	  co.style.height = h;
+	  co.style.width = w;
+	  co.width = w;
+	  o.appendChild( co );
+
+	  var h = co.offsetHeight;
+	  co.height = h;
+
+	  var min = 9999;
+	  var max = -1;
+
+	  for ( var i = 0; i < p.length; i++ ) {
+		p[i] = p[i] - 0;
+		if ( p[i] < min ) min = p[i];
+		if ( p[i] > max ) max = p[i];
+	  }
+
+	  if ( co.getContext ) {
+		var c = co.getContext("2d");
+		c.strokeStyle = "red";
+		c.lineWidth = 1.0;
+		c.beginPath();
+
+		for ( var i = 0; i < p.length; i++ ) {
+		  if ( i == 0 )
+			c.moveTo( (w / p.length) * i, h - (((p[i] - min) / (max - min)) * h) );
+		  c.lineTo( (w / p.length) * i, h - (((p[i] - min) / (max - min)) * h) );
+		}
+
+		c.stroke();
+		o.style.display = 'inline';
+	  }
+	}
 	
 	navlet = new Navlet();
 	navlet.init(window);
