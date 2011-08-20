@@ -434,6 +434,20 @@
 	right:0;
 }
 
+#navlet .timeline-scale-marker {
+	
+	position:absolute;
+	color: gray;
+	background: none;
+	border: none;
+	border-left: 1px solid gray;
+	top: -25px;
+	height: 25px;
+	line-height: 25px;
+	font-size: 12px;
+	text-indent:5px;
+}
+
 /* Close to LEFT side rules : */
 
 #navlet .close-left-side .timeline-block-flag.middle {

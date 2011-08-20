@@ -1113,9 +1113,40 @@
 							]
 						};
 						
+						
+						
 						var chartHtml = [];
 						
 						chartHtml.push("<div id='timeline-scale' class='timeline-scale reveal'>");
+						
+						var DT_as_string = "" + DT;
+						var max = Math.pow(10, DT_as_string.length) ;
+						
+						//console.log(max)
+						while(max/2 > DT) {
+							//console.log(max)
+							max = Math.floor(max/2);
+						}
+						
+						var scaleUnit = Math.floor(max/5);
+						//console.log("scaleUnit " + scaleUnit)
+						//console.log("DT " + DT)
+						
+						var currentPosPx = 0, currentPos = 0;
+						while(1) {
+						
+							if(currentPosPx > availableWidthInPixel) {
+								break;
+							}
+							
+							// Adding timeline scale markers: 
+							chartHtml.push("<div style='left:"+currentPosPx+"px'class='timeline-scale-marker'>"+currentPos+" ms</div>");
+							
+							currentPos += scaleUnit;
+							currentPosPx += Math.floor(availableWidthInPixel*scaleUnit/DT)
+							
+						}
+						
 						
 						chartHtml.push("<div id='timeline-scale-feedback' class='none'>");
 						chartHtml.push("<div id='time-cursor' class=''></div>");
