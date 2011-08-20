@@ -866,12 +866,11 @@
 								}
 							}
 							else {
-								
 								if(!isValidUnixTime(value)) {
 									value = "NA";
 									NA = " na";
 								}
-								if(rawOffsetValue) {
+								else if(rawOffsetValue) {
 									value = value - navStartTime;
 								}
 							}
