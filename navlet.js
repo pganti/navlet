@@ -438,6 +438,18 @@
 			
 			return this._nRecord;
 		},
+		
+		exportAsString: function() {
+		
+			
+			var dataAsJson = [];
+			for(var i=0, l=this._set.length; i<l ; i++) {
+				dataAsJson.push(this._set[i].getRawData());
+			}
+			console.log(dataAsJson);
+			
+			return JSON.stringify(dataAsJson);
+		},
 			
 		addPerfData : function(perfData) {
 			
@@ -665,7 +677,8 @@
 		    rawOffsetValue,
 		    dockPanel, rawValuesPanel, customValuesPanel, chartPanel,
 			windowName = "MasterWindow",
-			dataSet;
+			dataSet,
+			exportWindow;
 		
 		// For remote only:
 		var autoCloseTimer = null;
@@ -1248,7 +1261,7 @@
 			
 			remoteWindow = ctx.open(
 				ctx.location.href,
-				"_blank",
+				"navletRemoteWindow",
 				windowOptions.join(',')
 			);
 			
@@ -1327,7 +1340,34 @@
 			setTimeout(postData, AppConfig.timers.dataReadyPollingInterval);
 			
 			log("initialization done.");		
-		}
+		};
+		
+		var exportData = function() {
+			
+			var windowOptions = [];
+			windowOptions.push("width=800");
+			windowOptions.push("height=680");
+			windowOptions.push("fullscreen=yes"); // Working on IE only 
+			//windowOptions.push("menubar=1");
+			windowOptions.push("resizable=yes"); 
+			//windowOptions.push("location=1"); 
+			
+			//var windowId =(new Date()).getTime();
+			
+			if(exportWindow !== undefined) {
+				exportWindow.close();
+			}
+			
+			exportWindow = ctx.open(
+				'about:blank',
+				"navletExportWindow",
+				windowOptions.join(',')
+			);
+			
+			var content = "<html><body><code style='word-wrap: break-word'>" + dataSet.exportAsString() + "</code></body></html>"
+			exportWindow.document.write(content) ;
+			exportWindow.focus();
+		};
 		
 		return {
 			init: function(context, conf) {
@@ -1374,6 +1414,9 @@
 					ctx.localStorage.setItem("rawOffsetValue", ""+rawOffsetValue);
 					
 					rawValuesPanel.updateView();
+				}
+				else if(actionName == "export-monitoring-data") {
+					exportData();
 				}
 				else if(actionName == "focus-remote-window") {
 					focusRemoteWindow();
