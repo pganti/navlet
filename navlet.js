@@ -4,15 +4,6 @@
 	
 	var minimalRealisticUnixTime = 1300000000000 ; // an arbitrary date in the past
 	
-	/*
-	// Thx doug 
-	Object.prototype.begetObject = function () {
-		function F() {}
-		F.prototype = this;
-		return new F();
-	};
-	*/
-	
 	var AppConfig = {
 		
 		"useIframeMode": false, // Deprecated but we never know ...
@@ -30,6 +21,7 @@
 			
 			"StartMonitoring" : "Start Monitoring",
 			"StopMonitoring" : "Stop Monitoring",
+			"PauseMonitoring" : "Pause Monitoring",
 			"Expand" : "expand",
 			"Collapse" : "collapse"
 		},
@@ -357,9 +349,8 @@
 		
 		this._set = [];
 		this._nRecord = 0;
-		//var minRecordTime = Infinity;
-		//var maxRecordTime = 0;
-		
+		this._minRecordTime = Infinity;
+		this._maxRecordTime = 0;
 		this._aggregatedData = null;
 	
 	};
@@ -432,6 +423,17 @@
 			}
 			
 			this._nRecord++;
+		},
+		
+		reset: function() {
+			
+			this._set = [];
+			this._nRecord = 0;
+			this._aggregatedData = null;
+			
+			this._minRecordTime = Infinity;
+			this._maxRecordTime = 0;
+		
 		},
 		
 		getRecordCount : function() {
@@ -673,6 +675,7 @@
 		    panels = [],
 		    masterWindow, remoteWindow,
 		    monitorModeOn = false,
+			monitorModePause = false,
 		    unsupportedFeatures = [],
 		    rawOffsetValue,
 		    dockPanel, rawValuesPanel, customValuesPanel, chartPanel,
@@ -810,8 +813,11 @@
 						var html = [];
 						
 						if(monitorModeOn) { // if(data.isDataCollection) {
-							
-							html.push("<a id='toggle-monitoring' data-global-event='toggle-monitoring' title='Click to stop monitoring of this page' class='monitoring-on navlet-button color action' href='javascript:void(0)' >" +  AppConfig.labels.StopMonitoring  + "</a>");
+							var monitorLabel = AppConfig.labels.StartMonitoring;
+							if(!monitorModePause) {
+								monitorLabel = AppConfig.labels.PauseMonitoring;
+							}
+							html.push("<a id='toggle-monitoring' data-global-event='toggle-monitoring' title='Click to pause monitoring of this page' class='monitoring-on navlet-button color action' href='javascript:void(0)' >" +  monitorLabel  + "</a>");
 							html.push("<div class='monitor-feedback-panel'>");
 							
 							html.push("<a												class='navlet-button-action' 				href='javascript:void(0)'>Samples: " + dataSet.getRecordCount() + "</a>");
@@ -1005,15 +1011,22 @@
 							htmlArray.push("<div class='timeline-block reveal ");
 							
 							if(pixelWidth < 350) {
-								if (leftMargin < availableWidthInPixel/2) {
+								if (leftMargin > availableWidthInPixel/2) {
 									
-									positionContextClass = " close-left-side ";
-								}
-								else {
-								
 									positionContextClass = " close-right-side ";
 								}
+								
 								htmlArray.push(positionContextClass);
+							}
+							
+							var widthRate = " normal ";
+							if(pixelWidth < 5) {
+								widthRate = " tiny ";
+							}
+							else {
+								if(pixelWidth < 20) {
+									widthRate = " small ";
+								}
 							}
 							
 							htmlArray.push(timelineBlockConf.cssClass);
@@ -1028,9 +1041,18 @@
 								htmlArray.push("<div class='font timeline-label'>" + timelineBlockConf.timelineName + "</div>");
 							}
 							
-							htmlArray.push("<div class='timeline-block-flag start none'><div class='link-to-bar shadow'></div><div class='timeline-block-label font shadow'>"+ timelineBlockConf.startEventName +":  " +(timelineBlockConf.startEventValue - initialTime)+ "ms</div></div>");
-							htmlArray.push("<div class='timeline-block-flag end none'><div class='link-to-bar shadow'></div><div class='timeline-block-label font shadow'>"+ timelineBlockConf.endEventName +":  " +(timelineBlockConf.endEventValue - initialTime)+ "ms</div></div>");
-							htmlArray.push("<div class='timeline-block-flag middle none'><div class='link-to-bar shadow'></div><div class='timeline-block-label font shadow'>"+  timelineBlockConf.timelineName +":  " +(timelineBlockConf.endEventValue - timelineBlockConf.startEventValue)+ "ms</div></div>");
+							htmlArray.push("<div class='timeline-block-flag none " + widthRate + positionContextClass+ "'>");
+							htmlArray.push("<div class='main-field field'>");
+							htmlArray.push("<span class='label'>"+timelineBlockConf.timelineName +":</span><span class='value'>" +(timelineBlockConf.endEventValue - timelineBlockConf.startEventValue)+ " ms</span>" ); 
+							htmlArray.push("</div>");
+							htmlArray.push("<div class='field'><span class='label ctx-label'>Start event:</span>");
+							htmlArray.push("<span class='label'>"+timelineBlockConf.startEventName +":</span><span class='value'>" +(timelineBlockConf.startEventValue - initialTime)+ " ms</span>" ); 
+							htmlArray.push("</div>");
+							htmlArray.push("<div class='field'><span class='label ctx-label'>End event:</span>");
+							htmlArray.push("<span class='label'>"+timelineBlockConf.endEventName +":</span><span class='value'>" +(timelineBlockConf.endEventValue - initialTime)+ " ms</span>" ); 
+							htmlArray.push("</div>");
+							htmlArray.push("<div class='bottom-arrow'></div>");
+							htmlArray.push("</div>");
 							
 							if(data.hasSparklineData) {
 							
@@ -1126,8 +1148,6 @@
 							]
 						};
 						
-						
-						
 						var chartHtml = [];
 						
 						chartHtml.push("<div id='timeline-scale' class='timeline-scale reveal'>");
@@ -1135,31 +1155,30 @@
 						var DT_as_string = "" + DT;
 						var max = Math.pow(10, DT_as_string.length) ;
 						
-						//console.log(max)
 						while(max/2 > DT) {
-							//console.log(max)
 							max = Math.floor(max/2);
 						}
 						
 						var scaleUnit = Math.floor(max/5);
-						//console.log("scaleUnit " + scaleUnit)
-						//console.log("DT " + DT)
-						
+						var timeLabel ;
 						var currentPosPx = 0, currentPos = 0;
+						
 						while(1) {
 						
 							if(currentPosPx > availableWidthInPixel) {
 								break;
 							}
 							
-							// Adding timeline scale markers: 
-							chartHtml.push("<div style='left:"+currentPosPx+"px'class='timeline-scale-marker'>"+currentPos+" ms</div>");
+							timeLabel = currentPos + " ms" ;
+							// Adding timeline scale markers (if it does not fall outside of the timeline): 
+							if(availableWidthInPixel > (currentPosPx + timeLabel.length*10)) {
+							
+								chartHtml.push("<div style='left:"+currentPosPx+"px'class='timeline-scale-marker'>"+ timeLabel +"</div>");
+							}
 							
 							currentPos += scaleUnit;
 							currentPosPx += Math.floor(availableWidthInPixel*scaleUnit/DT)
-							
 						}
-						
 						
 						chartHtml.push("<div id='timeline-scale-feedback' class='none'>");
 						chartHtml.push("<div id='time-cursor' class=''></div>");
@@ -1195,11 +1214,10 @@
 		};
 		
 		var onPostMessageReceived = function(e){
-				//log("Receiving serialized data received from remote window: "+e.data);
+				
 				ctx.console.log("[MasterWindow]: <-- Receiving serialized data received from remote window...");
 				var remoteWindowPerfData = new PerfData();
 				remoteWindowPerfData.setData(e.data)
-				//log("unserializedPostMessageData: ", unserializedPostMessageData);
 				
 				if(monitorModeOn) {
 					
@@ -1217,14 +1235,25 @@
 		var startMonitorMode = function() {
 			
 			monitorModeOn = true;
-			dataSet = new PerfDataSet();
+			
+			if(monitorModePause) {
+				
+				// Navlet was previously in pause
+				// Remove flag and keep existing data
+				monitorModePause = false;
+			}
+			else {
+				// Initial start and was not in pause before,
+				// new data set:
+				dataSet = new PerfDataSet();
+			}
 			// Attach event handler to receive data from remote windows:
 			ctx.addEventListener("message", onPostMessageReceived, false);
 			
 			spawnRemoteWindow();
 		};
 		
-		var stopMonitorMode = function() {
+		var pauseMonitorMode = function() {
 			
 			// Attach event handler to receive data from remote windows:
 			ctx.removeEventListener("message", onPostMessageReceived);
@@ -1236,7 +1265,20 @@
 				remoteWindow = null;
 			}
 			
-			monitorModeOn = false;
+			monitorModePause = true;
+		};
+		
+		var resetMonitorMode = function() {
+			
+			var sampleCount = dataSet.getRecordCount();
+			if(sampleCount > 0) {
+				if (confirm("Are you sure you want to drop your "+sampleCount+" samples ?" )) { 
+				
+					dataSet.reset();
+				}
+			}
+			
+			
 		};
 		
 		var spawnRemoteWindow = function() {
@@ -1398,7 +1440,12 @@
 			
 				if(actionName == "toggle-monitoring") {
 					if(monitorModeOn) {
-						stopMonitorMode();
+						if(monitorModePause) {
+							startMonitorMode();
+						}
+						else {
+							pauseMonitorMode();
+						}
 					}
 					else {
 						startMonitorMode();
@@ -1420,6 +1467,10 @@
 				}
 				else if(actionName == "focus-remote-window") {
 					focusRemoteWindow();
+				}
+				else if(actionName == "reset-monitoring") {
+					resetMonitorMode();
+					dockPanel.updateView();
 				}
 				else {
 					alert("no action mapped: " + actionName)
