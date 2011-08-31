@@ -1,32 +1,34 @@
-
 TODO:
 
-fix position of tooltip for small/tiny sizes
-
-add custom data into data set object
-bind custom data to advanced panel
-draw custom panel on chart panel / overlay custom timers on navigation timeline chart
-redo layout engine to stick to the top
-bind hovered raw values and custom values to timeline with a timeline feedback (color, highlight)
-bind timeline to hovered raw values and custom values with a visual feedback on values
-ability to set custom delta or timers coming from business code
-reset custom values to default
-about page
-showing delta of value when in moitoring mode and updating data
-show data repartition when/after monitoring mode
-advanced monitoring mode with eventual beacon
-check for memory leaks
-check remote window in monitor mode in order not to lost connection
-make panel render only when perfdata is available
-
+ - add CSS documentation
+ - add JS/high level architecture documentation
+ - clean up bloated CSS after iframe migration
+ - optional storage of recorded data in a Google App Engine back end
+ - add custom data into data set object
+ - bind custom data to advanced panel
+ - draw custom panel on chart panel / overlay custom timers on navigation timeline chart
+ - bind hovered raw values and custom values to timeline with a timeline feedback (color, highlight)
+ - bind timeline to hovered raw values and custom values with a visual feedback on values
+ - ability to set custom delta or timers coming from business code
+ - reset custom values to default
+ - showing delta of value when in moitoring mode and updating data
+ - show data repartition (gaussian) when/after monitoring mode
+ - advanced monitoring mode with eventual beacon
+ - check for memory leaks
+ - check remote window in monitor mode in order not to lost connection
+ - make panel render only when perfdata is available
+ - video with voice/subtitles on project page
+ - fix position of tooltip for small/tiny sizes
 
 DONE:
 
-improve "no support popup" instead of default alert (in particular detect various doument for IE)
-update values and chart when in monitoring mode
-monitoring panel
-draw Navigation Timeline from raw data
-add feature detection (querySelectorAll, localStorage, naivgation timing , addEventListener...)
-create a dataset object instead of raw window.timing
-offset value for left panel of raw data
-less clunky blue buttons
+ - [in progress] Migrate panels to iframe panels to avoid CSS side effects
+ - about page
+ - improve "no support popup" instead of default alert (in particular detect various doument for IE)
+ - update values and chart when in monitoring mode
+ - monitoring panel
+ - draw Navigation Timeline from raw data
+ - add feature detection (querySelectorAll, localStorage, naivgation timing , addEventListener...)
+ - create a dataset object instead of raw window.timing
+ - offset value for left panel of raw data
+ - less clunky blue buttons
