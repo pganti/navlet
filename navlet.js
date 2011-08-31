@@ -5,7 +5,7 @@
   var AppConfig = {
 		
 		"useIframeMode": false,
-		
+		"projectUrl" : "http://code.google.com/p/navlet/",
 		"neededFeatures" : [
 			"performance",
 			"localStorage",
@@ -1469,6 +1469,9 @@
 				else if(actionName == "reset-monitoring") {
 					resetMonitorMode();
 					dockPanel.updateView();
+				}
+				else if(actionName == "about") {
+					ctx.open(AppConfig.projectUrl, "target:_blank");
 				}
 				else {
 					alert("no action mapped: " + actionName)
