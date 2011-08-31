@@ -2,11 +2,9 @@
 	
 	var navlet;
 	
-	var minimalRealisticUnixTime = 1300000000000 ; // an arbitrary date in the past
-	
-	var AppConfig = {
+  var AppConfig = {
 		
-		"useIframeMode": false, // Deprecated but we never know ...
+		"useIframeMode": false,
 		
 		"neededFeatures" : [
 			"performance",
@@ -982,8 +980,8 @@
 							tlfd.style.left = (evt.clientX-ts_pos.x) + "px";
 						});
 						
-						if(ctx.document.querySelectorAll('#bottom-panel-id .sparkline')[0])
-							sparkline(ctx.document.querySelectorAll('#bottom-panel-id .sparkline')[0]);
+						//if(ctx.document.querySelectorAll('#bottom-panel-id .sparkline')[0])
+						 //  sparkline(ctx.document.querySelectorAll('#bottom-panel-id .sparkline')[0]);
 						
 					},
 					"template" : function(data) {
