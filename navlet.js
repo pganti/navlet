@@ -1451,7 +1451,7 @@
 					dockPanel.updateView();
 				}
 				else if(actionName == "close-navlet") {
-					stopMonitorMode();
+					pauseMonitorMode();
 					clean();
 				}
 				else if(actionName == "offset-raw-values") {
