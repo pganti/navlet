@@ -2,7 +2,7 @@
 TODO:
 
 fix position of tooltip for small/tiny sizes
-
+MAke the whole bookmarklet resistant to CSS from monitored page (iframe/blindage)
 add custom data into data set object
 bind custom data to advanced panel
 draw custom panel on chart panel / overlay custom timers on navigation timeline chart
