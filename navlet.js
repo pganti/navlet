@@ -32,7 +32,8 @@
 		"timers": {
 			"autoCloseTimerDuration" : 60000,
 			"dataReadyPollingInterval": 500,
-			"relayoutInterval": 80
+			"relayoutInterval": 80,
+			"reloadDonePollerInterval": 500
 		},	
 
 		"minimalRealisticUnixTime" : 1300000000000, // an arbitrary date in the past, to smoke test unix times
@@ -694,8 +695,6 @@
 			Utils.addEvent(ts, "mousemove", function(evt) {
 				tc.innerHTML = Math.floor((evt.clientX-ts_pos.x) * ((data.query("performance.timing.loadEventEnd") - data.query("performance.timing.navigationStart"))/ctx.document.querySelectorAll('.panel-content-wrap')[0].offsetWidth)) + "ms"
 				tlfd.style.left = (evt.clientX-ts_pos.x) + "px";
-				
-				console.log("tlfd.style.left:"+tlfd.style.left)
 			});
 			
 			/*
@@ -715,13 +714,9 @@
 				widthPerc, leftMargin,
 				positionContextClass;
 			
-			//console.log("availableWidthInPixel" + availableWidthInPixel)
-				
-
 			var buildTimelineBlock = function(htmlArray, timelineBlockConf) {
 				pixelWidth = Math.floor(availableWidthInPixel*(timelineBlockConf.endEventValue - timelineBlockConf.startEventValue)/DT);
 				leftMargin = Math.floor(availableWidthInPixel*(timelineBlockConf.startEventValue - initialTime)/DT)
-				//console.log("pixelWidth" + pixelWidth)
 				if(pixelWidth == 0) {
 					return;
 				}
@@ -1232,7 +1227,6 @@
 			hasClass : function(elt, className) {
 			
 				var classes = elt.className;
-				console.log(classes + " -- " + className);
 				if(typeof(classes)=='string') {
 					if((new RegExp("\\b" + className + "\\b","ig")).test(classes)) {
 						return true;
@@ -1572,10 +1566,6 @@
 	};
 	
 	
-	var AbstractPanel = {
-	
-	}
-	
 	var Panel = function() {
 		
 		var id,
@@ -1879,11 +1869,12 @@
 			
 			var postData = function() {
 				
+				//logger.info("Tentative of sending data !");
+				
 				data = new PerfData(ctx);
 				
 				if(data.isReady()) {
 					serializedMessage = data.serialize();
-					//masterWindow.console.log("[RemoteWindow]: --> Sending serialized data: "+serializedMessage);
 					logger.info(" --> Sending serialized data...");
 					masterWindow.postMessage(serializedMessage, ctx.location.href);
 				}
@@ -1895,7 +1886,7 @@
 			
 			ctx.setTimeout(postData, AppConfig.timers.dataReadyPollingInterval);
 			
-			logger.info("initialization done.");		
+			logger.info("initRemoteMode done.");		
 		};
 		
 		return {
@@ -1916,7 +1907,6 @@
 				else {
 					ctx = conf.remoteWindow;
 				}
-				
 				
 				// Using masterWindow in order to see logs in main window (amd not the hidden remote one)
 				logger = Utils.getLogger(masterWindow, "RemoteWindow");
@@ -2130,17 +2120,70 @@
 		};
 		
 		var reloadRemoteWindow = function() {
-			
+			/*
 			if(autoCloseTimer != null) {
 				// Autoclose set, deactivating it:
 				logger.info("Clearing - autoclosing");
 				remoteWindow.clearTimeout(autoCloseTimer);
-			}
-			logger.info("reloading");
-			remoteWindow.location.reload();
+			}*/
+			logger.info("Reloading");
+			
+			// Setting an arbitrary on current remote window object:
+			//remoteWindow["navlet-window-id"] = new Date().getTime();
+			
+			//logger.info('"navlet-window-id" set on current remoteWindow');
+			//logger.info('reload imminent on current remoteWindow');
+			
+			// Reloading the remoteWindow in order to get fresh window.performance data:
+			remoteWindow.location.reload(true);
+			
+			// Issue is now to detect the end of the above reload.
+			// We can't use classic load listeners.
+			// We will use the "navlet-window-id" property that we attach to the window object before
+			// the reload. We will poll for it from masterWindow and as soon as we can't find the property 
+			
+			// anymore, we consider the remote window reloaded.			 
+			
+			//logger.info('Starting poller on remoteWindow to check reload state:');
+			/*
+			var reloadDonePoller = masterWindow.setInterval(function(){
+				
+				if(typeof(remoteWindow["navlet-window-id"]) == "number") {
+				
+					logger.info("Reload not completed, previous window property 'navlet-window-id' found:" + remoteWindow["navlet-window-id"] );
+				}
+				else {
+					// Reload end detected, clearing the poller.
+					masterWindow.clearTimeout(reloadDonePoller);
+					
+					// And let's wait 500ms more just in case of:
+					//masterWindow.setTimeout(function() {
+						
+						logger.info("Creating Navlet remote instance");
+			
+						var remoteNavlet = new RemoteNavlet();
+						remoteNavlet.init(remoteWindow, 
+							{
+								"remoteWindow": remoteWindow,
+								"masterWindow": ctx
+							}
+						);
+					//}, 500)
+					
+				}
+				
+			}, AppConfig.timers.reloadDonePollerInterval);
+			*/
+			/*
+			race condition with above reload 
+			Javascript context got storm by the end of reload
+			
+			remoteWindow.onload = function() {
+				logger.info("onload CALLLED");
+			}*/
 			
 			masterWindow.setTimeout(function(){
-				logger.info("Creating Navlet remote instance")
+				logger.info("Creating Navlet remote instance");
 			
 				var remoteNavlet = new RemoteNavlet();
 				remoteNavlet.init(remoteWindow, 
@@ -2150,7 +2193,6 @@
 					}
 				);
 				
-				
 				autoCloseTimer = remoteWindow.setTimeout(function(){	
 							
 					// Autoclose programmed if we lose connection 
@@ -2159,7 +2201,11 @@
 					remoteWindow.close();	
 				}, AppConfig.timers.autoCloseTimerDuration);
 				
-			}, 1000); // TODO: find a better way to handle 'reload load event' (breaking on IE without setTimeout)
+			}, 3000); // TODO: find a better way to handle 'reload load event' (breaking on IE without setTimeout)
+					  // We could add a setimouted recovery callback but then difficulty reside in making the difference
+					  // Between a not well set remoteNavlet and a long loading page...
+					  // Short term solution for this late end of week end commit is too set a "big enough" value..
+			
 		};
 		
 		
