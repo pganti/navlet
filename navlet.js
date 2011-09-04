@@ -265,7 +265,6 @@
 				
 				if(evtData.panelName in iframePanels) {
 					
-					var iframePanel = iframePanels[evtData.panelName] ;
 					if(evtData.state ==  AppConfig.labels.Collapse) {
 						
 						layoutInfo[evtData.panelName].height = layoutInfo.defaultHeaderHeight;
@@ -445,15 +444,13 @@
 					}
 				})).init(ctx);
 				
-				debugger;
-				
 				// For each previously created panels, we get the user configuration from 
 				// localStorage to restore it.
 				// User configuration means only collapse/expand state for a panel for now.
 				for(var ifpanel in iframePanels) {
 				
 					//ctx.localStorage.setItem(panelName + "-state", currentState);
-					var expandedState = Utils.parseBoolean(Utils.store.get(ifpanel + "-expanded", "false"));
+					var expandedState = Utils.parseBoolean(Utils.store.get(ifpanel + "-expanded", "true"));
 					inst.updateLayoutDefinition({
 						"panelName": ifpanel,
 						"state": expandedState ? AppConfig.labels.Expand : AppConfig.labels.Collapse
@@ -1575,6 +1572,10 @@
 	};
 	
 	
+	var AbstractPanel = {
+	
+	}
+	
 	var Panel = function() {
 		
 		var id,
@@ -1589,13 +1590,6 @@
 			data, 
 			logger,
 			afterCreate;
-		
-		var predefinedPanels = {
-			"dockPanel": {},
-			"bottomPanel" : {},
-			"leftColumnPanel": {},
-			"rightColumnPanel": {}
-		}
 		
 		var generateContainer = function(html) {
 			
@@ -1612,10 +1606,10 @@
 			panel.innerHTML = html;
 			update();
 			
-			var wasExpanded = Utils.parseBoolean(Utils.store.get(panelName + "-expanded", "false")); // Not expanded by default
+			var wasExpanded = Utils.parseBoolean(Utils.store.get(panelName + "-expanded", "true")); // Not expanded by default
 			
-			if(wasExpanded){ // was not defined, default state is expanded
-				togglePanel();
+			if(wasExpanded){
+				togglePanel(); 
 			}
 			
 			attachPanelEvents();
@@ -1835,9 +1829,6 @@
 					domCtx =  jsonConf.domContext ||  ctx.document.getElementsByTagName('body')[0];
 					title = jsonConf.title || "";
 					panelName = jsonConf.panelName;
-					if(!Utils.isSet(predefinedPanels[panelName])) {
-						logger.error("Panel type not well defined")
-					}
 					
 					afterCreate = jsonConf.afterCreate;
 					
