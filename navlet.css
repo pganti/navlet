@@ -368,7 +368,7 @@
 /* Special popup styles for timeline popups: */
 
 .navlet-container .timeline-block-flag {
-	
+	font-size: 11px;
 	position:	relative;
 	padding: 4px 11px;
 	background-color: black;
@@ -398,12 +398,8 @@
 	margin-left: -12px;
 }
 
-.navlet-container .timeline-block-flag .field .label {
-	font-size: 11px;
-	
-}
+.navlet-container .timeline-block-flag .field .label {}
 .navlet-container .timeline-block-flag .field .value {
-	font-size: 11px;
 	float: right
 }
 
@@ -416,16 +412,16 @@
 }
 
 .navlet-container .timeline-block-flag .main-field {
+	font-weight: bold;
 	padding: 7px 0;
 	border-bottom: gray 1px dotted;
-}
-.navlet-container .timeline-block-flag .main-field .label {
-	font-weight: bold;
 	font-size: 14px;
 }
+
+.navlet-container .timeline-block-flag .main-field .label {}
 .navlet-container .timeline-block-flag .main-field .value {
-	font-weight: bold;
 	color: yellow;
+	
 }
 
 /* END Special popup styles for timeline popups: */
@@ -494,8 +490,6 @@
 .navlet-container .timeline-scale  .tick{
 	width: 0;
 	border: none;
-	/*border-left: 1px solid gray;
-	color: gray;*/
 }
 
 .navlet-container .timeline-label {
@@ -506,7 +500,7 @@
 .navlet-container .chart-dnsBlock 				{	background-color: purple; 		}
 .navlet-container .chart-TCPBlock 				{	background-color: magenta; 		}
 .navlet-container .chart-requestBlock 			{	background-color: green; 		}
-.navlet-container .chart-responseBlock 		{	background-color: blue; 		}
+.navlet-container .chart-responseBlock 			{	background-color: blue; 		}
 .navlet-container .chart-domReady 				{	background-color: chocolate; 	}
 .navlet-container .chart-domReadyDuration 		{	background-color: yellow; 		}
 .navlet-container .chart-chart-domReadyToLoad	{	background-color: cadetblue; 	}
