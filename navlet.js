@@ -11,6 +11,7 @@
 		"useIframeMode": false, // Deprecated but we never know ...
 		
 		"neededFeatures" : [
+			"console",
 			"performance",
 			"localStorage",
 			"JSON.stringify",
@@ -306,35 +307,54 @@
 				EventBus.listen("panel-state-init", {callback: inst.updateLayoutDefinition});
 				EventBus.listen("panel-state-changed", {callback: inst.updateLayoutDefinitionAndLayout});
 				
+				// Following part is about creating the popupIframe,
+				// TODO: should be extracted to some Domain classes/functions
 				
+				// Any popup used for navlet are made using a shared iframe 
+				// that weposition using javascript.
+				// Again we use an inconvenient iframe to protect navlet's style from
+				// external styles coming from the page.
 				popupIframe =  Utils.generateElement("iframe", {
 					"id": "iframePopup",
 					"name": "iframePopup",
 					"frameborder": 0,
 					"class": "iframePopup",
-					"src": "about:blank",
-					"style": "border: red 2px solid; position: fixed;"
+					"src": "about:blank"
+					//,"style": "border: red 2px solid; position: fixed;"
 				}, ctx.document);
+				
 				ctx.document.getElementsByTagName("body")[0].appendChild(popupIframe);
 				
+				popupIframe.contentDocument.write("<html><head></head><body></body></html>"); // Needed for IE otherwise it can't get a body reference
+				popupIframe.contentDocument.getElementsByTagName("body")[0].setAttribute("class", "navlet-container iframe-popup");
+				
+				
+				// TODO: Refactor that to make reuse function in IframePanel.
+				// This method should be in a parent class (IframePlaceholder) that
+				// will be extended by IframePanel and IframePopup and allow us to share the love.
+				var linkNode = Utils.generateElement("link", {
+					"id": "navlet-css",
+					"type": "text/css",
+					"rel": "stylesheet",
+					"href": window.navlet.url_root + 'navlet.css',
+					"media": "screen"
+				}, popupIframe.contentDocument);				
+				popupIframe.contentDocument.getElementsByTagName("head")[0].appendChild(linkNode);
+				
+				// Attaching opening behavior of singleton iframe popup:
 				EventBus.listen("show-popup", {
 					
 					callback: function(evtData) {
 						
-						console.log("show-popup");
-						console.log(JSON.stringify(evtData.anchorPosition));
-						console.log(evtData.content);
-						console.log(evtData.contentDimension);
 						var styles = [];
-						styles.push("border: red 2px solid");
+						//styles.push("border: red 2px solid");
 						styles.push("position: fixed");
 						styles.push("z-index:15000");
 						
-						// Top:
-						styles.push("top:" + (evtData.anchorPosition.y - evtData.contentDimension.h) + "px");
-						styles.push("left:" + (evtData.anchorPosition.x - Math.floor(evtData.contentDimension.w/2)) + "px");
-						styles.push("width:" + evtData.contentDimension.w + "px");
-						styles.push("height:" + evtData.contentDimension.h + "px");
+						styles.push("top:" + evtData.popupConf.top + "px");
+						styles.push("left:" + evtData.popupConf.left + "px");
+						styles.push("width:" + evtData.popupConf.width + "px");
+						styles.push("height:" + evtData.popupConf.height + "px");
 						
 						
 						styles.push("display:block");
@@ -343,6 +363,24 @@
 						popupIframe.contentDocument.body.innerHTML = evtData.content;
 					}
 				});
+				
+				// Attaching closing behavior of singleton iframe popup:
+				EventBus.listen("hide-popup", {
+					
+					callback: function(evtData) {
+						var styles = [];
+						styles.push("position: absolute");
+						styles.push("left: -1000em");
+						popupIframe.setAttribute("style", styles.join(";"));
+					}
+				});
+				
+				/*
+				*	The following part is creating each panel of Navlet UI.
+				*   Each Panel is encapsulated in an iframe (through iframePanel object) 
+				*   to protect the navlet UI from external styles from the page.
+				*/
+				
 				
 				iframePanels["leftColumnPanel"] = (new IframePanel("leftColumnPanel", {
 				
@@ -407,6 +445,9 @@
 					}
 				})).init(ctx);
 				
+				// For each previously created panels, we get the user configuration from 
+				// localStorage to restore it.
+				// User configuration means only collapse/expand state for a panel for now.
 				for(var ifpanel in iframePanels) {
 				
 					//ctx.localStorage.setItem(panelName + "-state", currentState);
@@ -416,6 +457,8 @@
 						"state": expandedState ? AppConfig.labels.Expand : AppConfig.labels.Collapse
 					})
 				}
+				
+				// Bigbang initial drawing of the UI:
 				relayout();
 				
 				return inst;
@@ -494,8 +537,9 @@
 			conf.context.document.getElementsByTagName("body")[0].appendChild(iframeElt);
 			
 			// TODO: Could be needed for crossbrowser issues:
-			//iframeElt.contentDocument.write("<html><head></head><body></body></html>");
-			//iframeElt.contentDocument.domain = conf.context.document.domain
+			
+			// IE9 need that otherwise document.body of the iframe is undefined:
+			iframeElt.contentDocument.write("<html><head></head><body></body></html>");
 			
 			return iframeElt;
 		},
@@ -520,10 +564,9 @@
 			
 			this.panelContentDef.domContext = this.iframeDocument.body;
 			
-			// TODO: Temporary hack before cleaning CSS
-			this.iframeDocument.body.id = "navlet";
-			
 			this.iframeDocument.body.className = "navlet-container"; 
+			
+			this.panelContentDef.masterWindow = this.iframeWindow.top;
 			
 			this.panelContent = Panel().init(this.iframeWindow, this.panelContentDef);
 			
@@ -547,15 +590,12 @@
 			"panelName" : "leftColumnPanel",
 			"template" : function(data, ctx) {
 				
-				//var storedOffsetOption = getOffsetRawValuesOption()
-				
-				var offsetRawValues = Utils.store.get( "rawOffsetValue" ,false);
-				
+				var offsetRawValues = Utils.parseBoolean(Utils.store.get( "rawOffsetValue" ,"false"));
 				var rawOffsetOption = "";
 				
 				rawOffsetOption = "<div class='option-column'>";
 				rawOffsetOption += "<input id='rawOffsetOption' data-global-event='offset-raw-values' class='action' type='checkbox' " + (offsetRawValues ? "checked='yes'" : "" )  + " />"
-				rawOffsetOption += "<label class='font' for='rawOffsetOption' >Offset raw values with navigationStart value</label>";
+				rawOffsetOption += "<label for='rawOffsetOption' >Offset raw values with navigationStart value</label>";
 				
 				if(data.isDataCollection) {
 					
@@ -596,7 +636,9 @@
 						}
 					}
 					
-					rawListHtml += "<li class='entry "+ NA +"'><span class='entry-label row-font'>"+ tmpPropName +"</span><span class='entry-value row-font'>"+value + "</span></li>"
+					rawListHtml += "<li class='entry "+ NA +" has-overla' data-overlay-position='right'>";
+					rawListHtml += "<span class='entry-label'>"+ tmpPropName +"</span><span class='entry-value'>"+value + "</span>";
+					rawListHtml += "<div class='overlay-content none'>pouet</div></li>"
 				}
 				   
 				rawListHtml += "</ul>";
@@ -642,32 +684,26 @@
 			
 			var ts_pos = element_position(ts);
 			
-			Utils.addEvent(ts, "mousemove", function(evt) {
-				tc.innerHTML = Math.floor((evt.clientX-ts_pos.x) * ((data.query("performance.timing.loadEventEnd") - data.query("performance.timing.navigationStart"))/ctx.document.querySelectorAll('.panel-content-wrap')[0].offsetWidth)) + "ms"
-				tlfd.style.left = (evt.clientX-ts_pos.x) + "px";
-			});
-			/*
-			Utils.addEvent(ctx.document.body, "mousemove", function(evt) {
-				console.log(evt.clientX)
-				console.log(evt.clientY)
-				console.log(evt)
-			});
-			*/
-			/*
 			Utils.addEvent(ts, "mouseenter", function(evt) {
-				debugger;
-				this.style.backgroundColor = "red";
+				ctx.document.getElementById('timeline-scale-feedback').style.display = "block";
 			});
 			
 			Utils.addEvent(ts, "mouseleave", function(evt) {
-				this.style.backgroundColor = "yellow";
+				ctx.document.getElementById('timeline-scale-feedback').style.display = "none";
 			});
 			
-			*/
+			Utils.addEvent(ts, "mousemove", function(evt) {
+				tc.innerHTML = Math.floor((evt.clientX-ts_pos.x) * ((data.query("performance.timing.loadEventEnd") - data.query("performance.timing.navigationStart"))/ctx.document.querySelectorAll('.panel-content-wrap')[0].offsetWidth)) + "ms"
+				tlfd.style.left = (evt.clientX-ts_pos.x) + "px";
+				
+				console.log("tlfd.style.left:"+tlfd.style.left)
+			});
 			
+			/*
+			//Transforming sparkline DHTML data into a graph 
 			if(ctx.document.querySelectorAll('.sparkline')[0])
 				Utils.sparkline(ctx.document.querySelectorAll('.sparkline')[0]);
-			
+			*/
 		},
 		"template" : function(data, ctx) {
 			
@@ -691,7 +727,7 @@
 					return;
 				}
 				
-				htmlArray.push("<div data-orientation='top' class='timeline-block has-overlay ");
+				htmlArray.push("<div data-overlay-position='top' class='timeline-block has-overlay ");
 				
 				if(pixelWidth < 350) {
 					if (leftMargin > availableWidthInPixel/2) {
@@ -721,10 +757,11 @@
 				htmlArray.push("px;' >");
 				
 				if(timelineBlockConf.timelineName.length * 10 < pixelWidth) {
-					htmlArray.push("<div class='font timeline-label'>" + timelineBlockConf.timelineName + "</div>");
+					htmlArray.push("<div class='timeline-label'>" + timelineBlockConf.timelineName + "</div>");
 				}
 				
-				htmlArray.push("<div class='timeline-block-flag none " + widthRate + positionContextClass+ "'>");
+				htmlArray.push("<div class='overlay-content none'>");
+				htmlArray.push("<div class='timeline-block-flag " + widthRate + positionContextClass+ "'>");
 				htmlArray.push("<div class='main-field field'>");
 				htmlArray.push("<span class='label'>"+timelineBlockConf.timelineName +":</span><span class='value'>" +(timelineBlockConf.endEventValue - timelineBlockConf.startEventValue)+ " ms</span>" ); 
 				htmlArray.push("</div>");
@@ -735,6 +772,7 @@
 				htmlArray.push("<span class='label'>"+timelineBlockConf.endEventName +":</span><span class='value'>" +(timelineBlockConf.endEventValue - initialTime)+ " ms</span>" ); 
 				htmlArray.push("</div>");
 				htmlArray.push("<div class='bottom-arrow'></div>");
+				htmlArray.push("</div>");
 				htmlArray.push("</div>");
 				
 				if(data.hasSparklineData) {
@@ -900,7 +938,12 @@
 			var advList = "<ul class='list'>";
 			
 			function addItemToAdvList(key, value) {
-				advList += "<li class='entry'><span class='entry-label row-font'>"+key+"</span><span class='entry-value row-font'>"+value + "</span></li>";
+				
+				advList += "<li class='entry has-overla' data-overlay-position='left'>";
+				advList += "<span class='entry-label'>"+key+"</span>";
+				advList += "<span class='entry-value'>"+value + "</span>";
+				advList += "<span class='overlay-content none'>fion</span>";
+				advList += "</li>";
 			}
 			
 			addItemToAdvList("responseStart - navigationTime", (data.query("performance.timing.responseStart") - data.query("performance.timing.navigationStart")));
@@ -956,24 +999,77 @@
 	};
 	
 	var Utils = {
+	
+			getLogger : function(windowContext, loggerName) {
+				
+				var serializeMessage = function(msg) {
+				
+					if(typeof(msg) != "string") {
+						
+						try {
+						
+							// In case the msg is a valid JSON object:
+							msg = JSON.stringify(msg);
+						}
+						catch(e) {
+							// if the JSON stringification fail, we just let the JS engine 
+							// do the stingification
+						}
+					}
+					
+					return msg;
+				};
+				
+				return {
+				
+					info : function(msg) {
+						windowContext.console.info("[" + loggerName + "]: " + serializeMessage(msg) )
+					},
+					
+					error : function(msg) {
+						
+						windowContext.console.error("[" + loggerName + "]: " + serializeMessage(msg))
+					}
+				};
+			},
+			
+			logger: function() {
+			
+				return Utils.getLogger("Utils");
+			},
 			
 			offset: function(elem) {
 				var offset = null;
 				if ( elem ) {
-					offset = {x: 0, y: 0};
+					offset = {left: 0, top: 0};
 					do {
-						offset.y += elem.offsetTop;
-						offset.x += elem.offsetLeft;
+						offset.top += (elem.offsetTop - elem.scrollTop);
+						offset.left += (elem.offsetLeft - elem.scrollLeft);
 						elem = elem.offsetParent;
 					} while ( elem );
 				}
 				return offset;
 			},
 			
+			parseBoolean: function(booleanAsString) {
+				
+				if(typeof(booleanAsString) == 'string') {
+				
+					if(booleanAsString == "true") {
+						return true;
+					}
+					else if (booleanAsString == "false"){
+						return false;
+					}
+					// Boolean parser only accept "true" or "false" string,
+					// No support for middle values that generate complex bugs
+				}
+				
+				Utils.logger.error("parseBoolean failed on parsing: <" +booleanAsString+ ">");	
+			},
 			closestByClass: function(className, elt) {
 			
 				var cur = elt;
-				//debugger;
 				while ( cur.tagName.toLowerCase() != "body") {
 					if ( Utils.hasClass(cur, className) ) {
 						
@@ -1025,40 +1121,6 @@
 			cloneJSONObject : function(jsonObj) {
 			
 				return JSON.parse(JSON.stringify(jsonObj));
-			},
-			
-			getLogger : function(windowContext, loggerName) {
-			
-				var serializeMessage = function(msg) {
-				
-					if(typeof(msg) != "string") {
-						
-						try {
-						
-							// In case the msg is a valid JSON object:
-							msg = JSON.stringify(msg);
-						}
-						catch(e) {
-							// if the JSON stringification fail, we just let the JS engine 
-							// do the stingification
-						}
-					}
-					
-					return msg;
-				};
-				
-				return {
-				
-					info : function(msg) {
-					
-						windowContext.console.info("[" + loggerName + "]: " + serializeMessage(msg) )
-					},
-					
-					error : function(msg) {
-						
-						windowContext.console.error("[" + loggerName + "]: " + serializeMessage(msg))
-					}
-				};
 			},
 			
 			isAChildOf : function(_parent, _child) {
@@ -1524,7 +1586,8 @@
 			inst,		
 			tpl, 
 			domCtx, 
-			ctx, 
+			ctx,
+			masterWindow,			
 			cssClass, 
 			panelName, 
 			template, 
@@ -1574,59 +1637,74 @@
 			
 			var panelContent = ctx.document.querySelectorAll("#"+ id +" .panel-content")[0]
 			Utils.addEvent(panelContent, "mouseover", showContextualContent);
-			//Utils.addEvent(toggle, "mouseout", hideContextualContent);
+			Utils.addEvent(panelContent, "mouseout", hideContextualContent);
 		}
 		
 		var showContextualContent = function(evt) {
 		
-			//debugger;
-			var popupTrigger = Utils.closestByClass("has-overlay", evt.target)
+			var popupTrigger = Utils.closestByClass("has-overlay", evt.target);
 			
 			if(popupTrigger != null) {
 				
-				// TODO: protect this part:
-				var content = popupTrigger.querySelectorAll(".timeline-block-flag")[0].innerHTML;
+				var content = popupTrigger.querySelectorAll(".overlay-content")[0].innerHTML;
+				var iframeObj = ctx.top.document.getElementById(panelName);  // Assumption: only one level of nested iframes
+			    var objPos = Utils.offset(popupTrigger);			
+				var relativePosition = popupTrigger.getAttribute("data-overlay-position");
 				
-				var orientation = popupTrigger.getAttribute("data-orientation");
+				if(content && typeof(relativePosition) == "string") {
 				
-				if(content && typeof(orientation) == "string") {
-				
-					var offsetX = 0, offsetY = 0;
+					var offsetX = 0, 
+						offsetY = 0, 
+						contentPosConf = null,
+						defaultTop = iframeObj.offsetTop + objPos.top
+						defaultLeft = iframeObj.offsetLeft + objPos.left;
 					
-					if(orientation == "top") {
+					if(relativePosition == "top") {
 						
-						offsetX = Math.floor(popupTrigger.offsetWidth / 2);
+						contentPosConf = 
+							{
+								width: 254,
+								height: 127											
+							};
+							
+						contentPosConf.top = defaultTop - contentPosConf.height ;
+						contentPosConf.left = defaultLeft - Math.floor(contentPosConf.width/2) + Math.floor(popupTrigger.offsetWidth / 2) ;
+						
 					}
-					else if(orientation == "left") {
+					else if(relativePosition == "left") {
 						
-						offsetY = Math.floor(popupTrigger.offsetHeight / 2);
+						contentPosConf = 
+							{
+								width: 254,
+								height: 127											
+							};
+							
+						contentPosConf.top = defaultTop + Math.floor(popupTrigger.offsetHeight/2) -  Math.floor(contentPosConf.height/2) ;
+						contentPosConf.left = defaultLeft - contentPosConf.width;
 					}
-					else if (orientation == "right") {
+					else if (relativePosition == "right") {
 						
-						offsetX = Math.floor(popupTrigger.offsetWidth);
-						offsetY = Math.floor(popupTrigger.offsetHeight/2);
+						contentPosConf = 
+							{
+								width: 254,
+								height: 127											
+							};
+							
+						contentPosConf.top = defaultTop + Math.floor(popupTrigger.offsetHeight/2) -  Math.floor(contentPosConf.height/2) ;
+						contentPosConf.left = defaultLeft + popupTrigger.offsetWidth;
 					}
 					else {
-						logger.error("orientation <'"+ orientation +"'> found but not well defined.");
+						logger.error("relativePosition <'"+ relativePosition +"'> found but not well defined.");
 					}
 					
-					var iframeObj = ctx.top.document.getElementById(panelName);  // Assumption: only one level of nested iframes
-					var objPos = Utils.offset(popupTrigger);
 					
-					var anchorPosition = {
-						x: iframeObj.offsetLeft + objPos.x + offsetX, 
-						y: iframeObj.offsetTop + objPos.y + offsetY
-					};
-					
-					var objPos = Utils.offset(popupTrigger);
 					
 					EventBus.fire("show-popup", 
 						{
-							"anchorPosition": anchorPosition,
-							"content": content,
-							"contentDimension": {w: 150, h: 100}
+							"popupConf": contentPosConf,
+							"content": content
 						}
-			g		);
+					);
 				}
 				else {
 					logger.error("'has-overlay' defined but no orientation defined");
@@ -1635,12 +1713,18 @@
 			}	
 		};
 		
-		/*
+		
 		var hideContextualContent = function(evt) {
 			
-			EventBus.fire("hide-popup");
+			var popupTrigger = Utils.closestByClass("has-overlay", evt.target);
+			
+			if(popupTrigger != null) {
+				
+				// Exiting a popup that could have triggerred an overlay before, closing it
+				EventBus.fire("hide-popup");
+			}
 		};
-		*/
+		
 		
 		var togglePanel = function() {
 			
@@ -1721,15 +1805,11 @@
 			var expanded = false;
 			
 			html.push("<div class='panel-header'>");
-			html.push("    <h1 class='title-font panel-title'>" + title + "</h1>");
-			
-			html.push("    <a class='panel-toggle panel-action anchor-font' href='javascript:void(0)'>" + (expanded ? AppConfig.labels.Expand : AppConfig.labels.Expand) + "</a>");
-			//html.push("    <a class='panel-close panel-action' href='javascript:void(0)'>close</a>");
-			
+			html.push("    <h1 class='panel-title'>" + title + "</h1>");		
+			html.push("    <a class='panel-toggle panel-action' href='javascript:void(0)'>" + (expanded ? AppConfig.labels.Expand : AppConfig.labels.Expand) + "</a>");
 			html.push("</div>");
 			
-			html.push("<div class='panel-content'><div class='panel-content-wrap'>");
-			html.push("</div>");
+			html.push("<div class='panel-content'><div class='panel-content-wrap'></div></div>");
 			
 			var panelStub = generateContainer(html.join(""));
 			
@@ -1752,9 +1832,12 @@
 		
 		return {
 			init: function(windowContext, jsonConf) {
+				
+				jsonConf = jsonConf || {};
 				ctx = windowContext || window;
+				masterWindow = jsonConf.masterWindow || window;
 				inst = this;
-				logger = Utils.getLogger(ctx, "Panel")
+				logger = Utils.getLogger(masterWindow, "Panel")
 				
 				if(Utils.isSet(jsonConf)) {
 					domCtx =  jsonConf.domContext ||  ctx.document.getElementsByTagName('body')[0];
@@ -1870,7 +1953,6 @@
 		    masterWindow, 
 			remoteWindow,
 		    unsupportedFeatures = [],
-		    //rawOffsetValue,
 		    dockPanel, rawValuesPanel, customValuesPanel, chartPanel,
 			dataSet,
 			exportWindow,
@@ -1915,7 +1997,7 @@
 					
 		var initLocalMode = function() {
 			
-			rawOffsetValue = Utils.store.get( "rawOffsetValue" ,false); // getOffsetRawValuesOption();
+			rawOffsetValue = Utils.parseBoolean(Utils.store.get( "rawOffsetValue" ,"false")); // getOffsetRawValuesOption();
 			unsupportedFeatures = getUnsupportedFeatures(ctx);
 			
 			if(unsupportedFeatures.length == 0) {

@@ -2,135 +2,12 @@
 
 /* panel style */
 
+/* Core class for navlet UI elements. Should be applied on body element.*/
 .navlet-container {
 	
 	padding:0;
 	margin: 0;
-	background-color: black;
-	opacity: 0.9;
-	/*overflow: hidden;*/
-}
-
-#navlet .panel {
 	
-	font-size:14px;
-	font-family:Segoe UI,Arial,Verdana,Helvetica,sans-serif;
-	text-align:left;
-	line-height:18px;
-	color: white;
-	
-}
-
-#navlet .panel-content{
-	overflow: auto;
-}
-
-#navlet .panel.collapsed .panel-content{
-	height: 0;
-	overflow: hidden;
-}
-
-/*
-#navlet #top-left-panel-id.panel.expanded .panel-content,
-#navlet #top-right-panel-id.panel.expanded .panel-content{
-	bottom: auto;
-}
-*/
-
-
-
-#navlet .panel-header {
-	display: block;
-	overflow: auto;
-	height: 26px;
-	
-	background: #646870; /* Old browsers */
-	background: -moz-linear-gradient(top, #646870 0%, #2e2e2e 100%); /* FF3.6+ */
-	background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#646870), color-stop(100%,#2e2e2e)); /* Chrome,Safari4+ */
-	background: -webkit-linear-gradient(top, #646870 0%,#2e2e2e 100%); /* Chrome10+,Safari5.1+ */
-	background: -o-linear-gradient(top, #646870 0%,#2e2e2e 100%); /* Opera11.10+ */
-	background: -ms-linear-gradient(top, #646870 0%,#2e2e2e 100%); /* IE10+ */
-	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#646870', endColorstr='#2e2e2e',GradientType=0 ); /* IE6-9 */
-	background: linear-gradient(top, #646870 0%,#2e2e2e 100%); /* W3C */
-	
-	border-top: solid 1px #646870;
-	border-bottom: solid 1px #2e2e2e; 
-	
-	-webkit-user-select: none;
-}
-
-#navlet .panel-header:hover {
-	cursor:pointer;
-	
-	background: #45484d; /* Old browsers */
-	background: -moz-linear-gradient(top, #45484d 0%, #000000 100%); /* FF3.6+ */
-	background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#45484d), color-stop(100%,#000000)); /* Chrome,Safari4+ */
-	background: -webkit-linear-gradient(top, #45484d 0%,#000000 100%); /* Chrome10+,Safari5.1+ */
-	background: -o-linear-gradient(top, #45484d 0%,#000000 100%); /* Opera11.10+ */
-	background: -ms-linear-gradient(top, #45484d 0%,#000000 100%); /* IE10+ */
-	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#45484d', endColorstr='#000000',GradientType=0 ); /* IE6-9 */
-	background: linear-gradient(top, #45484d 0%,#000000 100%); /* W3C */
-	
-}
-
-#navlet .panel-title {
-	display: block;
-	float: left;
-	font-size:14px;
-	font-weight: bold;
-	margin:0;
-	padding:0;
-	margin-left: 8px;
-}
-
-#navlet .panel-action,
-#navlet .panel-action:link,
-#navlet .panel-action:visited {
-	text-decoration: underline;
-	cursor: pointer;
-	color: #FFEEEE;
-	margin-right: 8px;
-}
-
-#navlet .panel-action:hover {
-	text-decoration: none;
-	color: white;
-}
-
-#navlet .panel-close {
-	display: block;
-	float: right;
-}
-
-#navlet .panel-toggle {
-	display: block;
-	float: right;
-}
-
-#navlet .dockPanel .panel-content {
-	
-	position:absolute;
-	top: 0; right:0; left:0; bottom:0;
-	background-color:  #333;
-	padding-top: 6px;
-	border-top: 1px gray solid;
-}
-
-#navlet .dockPanel .panel-toggle{
-	display: none;
-}
-
-#navlet .dockPanel  .navlet-button {
-	margin-left: 2em;
-}
-
-/* End panel style */
-
-/* Heavy weight and local rules to override styles coming from monitored page*/
-#navlet .font,
-#navlet .anchor-font,
-#navlet .title-font,
-#navlet .row-font {
 	font-style: normal;
 	letter-spacing: 0;
 	word-spacing: 0;
@@ -148,23 +25,119 @@
 	text-shadow: 0 1px 1px #222;
 }
 
-#navlet .row-font {
+.navlet-container.iframe-popup {
+	
+	overflow: hidden;
+}
+
+.navlet-container .panel {
+	
+	background-color: rgba(0, 0, 0, 0.93);
+}
+
+.navlet-container .panel-content{
+	overflow: auto;
+}
+
+.navlet-container .panel.collapsed .panel-content{
+	height: 0;
+	overflow: hidden;
+}
+
+
+
+.navlet-container .panel-header {
+	display: block;
+	overflow: auto;
+	height: 26px;
+	cursor:pointer;
+	
+	background: #646870; /* Old browsers */
+	background: -moz-linear-gradient(top, #646870 0%, #2e2e2e 100%); /* FF3.6+ */
+	background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#646870), color-stop(100%,#2e2e2e)); /* Chrome,Safari4+ */
+	background: -webkit-linear-gradient(top, #646870 0%,#2e2e2e 100%); /* Chrome10+,Safari5.1+ */
+	background: -o-linear-gradient(top, #646870 0%,#2e2e2e 100%); /* Opera11.10+ */
+	background: -ms-linear-gradient(top, #646870 0%,#2e2e2e 100%); /* IE10+ */
+	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#646870', endColorstr='#2e2e2e',GradientType=0 ); /* IE6-9 */
+	background: linear-gradient(top, #646870 0%,#2e2e2e 100%); /* W3C */
+	
+	border-top: solid 1px #646870;
+	border-bottom: solid 1px #2e2e2e; 
+	
+	-webkit-user-select: none;
+}
+
+.navlet-container .panel-header:hover {
+	
+	background: #45484d; /* Old browsers */
+	background: -moz-linear-gradient(top, #45484d 0%, #000000 100%); /* FF3.6+ */
+	background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#45484d), color-stop(100%,#000000)); /* Chrome,Safari4+ */
+	background: -webkit-linear-gradient(top, #45484d 0%,#000000 100%); /* Chrome10+,Safari5.1+ */
+	background: -o-linear-gradient(top, #45484d 0%,#000000 100%); /* Opera11.10+ */
+	background: -ms-linear-gradient(top, #45484d 0%,#000000 100%); /* IE10+ */
+	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#45484d', endColorstr='#000000',GradientType=0 ); /* IE6-9 */
+	background: linear-gradient(top, #45484d 0%,#000000 100%); /* W3C */
+	
+}
+
+.navlet-container .panel-title {
+	display: block;
+	float: left;
+	font-size:14px;
+	font-weight: bold;
+	margin:0;
+	padding:0;
+	margin-left: 8px;
+}
+
+.navlet-container .panel-action,
+.navlet-container .panel-action:link,
+.navlet-container .panel-action:visited {
+	text-decoration: underline;
+	cursor: pointer;
+	color: #FFEEEE;
+	margin-right: 8px;
+}
+
+.navlet-container .panel-action:hover {
+	text-decoration: none;
+	color: white;
+}
+
+.navlet-container .panel-close {
+	display: block;
+	float: right;
+}
+
+.navlet-container .panel-toggle {
+	display: block;
+	float: right;
+}
+
+.navlet-container .dockPanel .panel-content {
+	
+	position:absolute;
+	top: 0; right:0; left:0; bottom:0;
+	background-color:  #333;
+	padding-top: 6px;
+	border-top: 1px gray solid;
+}
+
+.navlet-container .dockPanel .panel-toggle{
+	display: none;
+}
+
+.navlet-container .dockPanel  .navlet-button {
+	margin-left: 2em;
+}
+
+/* End panel style */
+
+.navlet-container .panel-title {
 	font-weight: bold;
 }
-#navlet .na .row-font {
-	color: grey;
-}
 
-#navlet .anchor-font {
-
-}
-
-/* Heavy weight and local rules to override styles coming from monitored page*/
-#navlet .title-font {
-	font-weight: bold;
-}
-
-#navlet .list {
+.navlet-container .list {
 	margin: 0;
 	padding: 20px 0;
 	width: 100%;
@@ -175,13 +148,12 @@
 	float: none;
 }
 
-/*#navlet .list .entry:nth-child(even) {background: #000}*/
-#navlet .list .entry:nth-child(odd) {
-	background-color: #111;
-	border: 1px solid #111;
+.navlet-container .list .entry:nth-child(odd) {
+	background-color: #222;
+	border: 1px solid #222;
 }
 
-#navlet .list .entry {
+.navlet-container .list .entry {
 	display: block;
 	padding: 6px 8px;
 	overflow: auto;
@@ -192,27 +164,25 @@
 	float: none;
 	vertical-align: middle;
 	width: 100%;
+	font-weight: bold;
 }
-#navlet .list .entry.na {
+.navlet-container .list .entry.na {
 	color: grey;
 }
 
-#navlet .list .entry:hover {
+.navlet-container .list .entry:hover {
 	border-top: 1px solid #fff;
 	border-bottom: 1px solid #fff;
 }
 
-#navlet .entry-label {
+.navlet-container .entry-label {
 	display:block;
-	font-weight: bold;
 	float: left;
-	text-align: left;
 	width: 210px;
 	height: auto;
 	min-height: 1.5em;
 }
-#navlet .entry-value {
-	font-weight: bold;
+.navlet-container .entry-value {
 	display:block;
 	float: left;
 	text-align: right;
@@ -220,28 +190,24 @@
 	width: 150px;
 }
 
-#navlet .option-column {
+.navlet-container .option-column {
 
 	padding: 6px;
 	background-color: gray;
 	position: relative;
 }
 
-#navlet .option-disabler {
+.navlet-container .option-disabler {
 	
 	display: block;
 	cursor: help;
 	background-color: black;
 	opacity: 0.7;
 	position: absolute;
-	top:0;
-	bottom:0;
-	left:0;
-	right:0;
-	
+	top:0; bottom:0; left:0; right:0;
 }
 
-#navlet .option-column label{
+.navlet-container .option-column label{
 
 	cursor: pointer;
 	vertical-align: top;
@@ -249,8 +215,8 @@
 
 /* Start button CSS code */
 
-#navlet .navlet-button-action,
-#navlet .navlet-button{
+.navlet-container .navlet-button-action,
+.navlet-container .navlet-button{
 	background-color: #2daebf;
 	display: inline-block;
 	padding: 6px 10px 8px;
@@ -264,15 +230,10 @@
 	text-shadow: 0 1px 1px #222;
 	position: relative;
 	cursor: pointer;
-	border: none;
-	background-image: none;
-	float: none;
-	text-slign: center;
-	box-shadow: none;
-	font-family:Segoe UI,Arial,Verdana,Helvetica,sans-serif;	
+	text-align: center;
 }
 
-#navlet .navlet-button-action {
+.navlet-container .navlet-button-action {
 	padding: 5px 10px 7px;
 	background-color: black;
 	border: 1px solid #2daebf;
@@ -292,7 +253,7 @@
 	-webkit-user-select: none;
 }
 
-#navlet .navlet-button-action.last {
+.navlet-container .navlet-button-action.last {
 	-webkit-border-top-right-radius: 5px;
 	-webkit-border-bottom-right-radius: 5px;
 	-moz-border-radius-topright: 5px;
@@ -301,16 +262,16 @@
 	border-bottom-right-radius: 5px;
 }
 
-#navlet .navlet-button:hover{
+.navlet-container .navlet-button:hover{
 	background-color: #76dbe8;
 }
-#navlet .navlet-button:active{
+.navlet-container .navlet-button:active{
 	background-color: #2daebf;
 }
-#navlet .navlet-button-action:hover {
+.navlet-container .navlet-button-action:hover {
 	border-color: #76dbe8;
 }
-#navlet .navlet-button-action:active {
+.navlet-container .navlet-button-action:active {
 	border-color: #76dbe8;
 }
 
@@ -318,7 +279,7 @@
 
 /* Monitoring feedback Panel*/
 
-#navlet .navlet-button.monitoring-on {
+.navlet-container .navlet-button.monitoring-on {
 	
 	-webkit-border-top-right-radius: 0;
 	-webkit-border-bottom-right-radius: 0;
@@ -328,7 +289,7 @@
 	border-bottom-right-radius: 0;
 }
 
-#navlet .monitor-feedback-panel {
+.navlet-container .monitor-feedback-panel {
 	display: inline-block;
 	border-color: #2daebf;
 	-webkit-border-top-right-radius: 5px;
@@ -340,38 +301,38 @@
 }
 
 
-#navlet .rightColumnPanel .panel-header {
+.navlet-container .rightColumnPanel .panel-header {
 	border-right: gray 1px solid;
 	border-top: gray 1px solid;
 }
 
-#navlet .rightColumnPanel .panel-header {
+.navlet-container .rightColumnPanel .panel-header {
 	border-left: gray 1px solid;
 	border-top: gray 1px solid;
 }
 
 /* Chart styles */
 
-#navlet .bottomPanel .panel-header {
+.navlet-container .bottomPanel .panel-header {
 	border-top: gray 1px solid;
 }
 
-#navlet .bottomPanel .panel-content {
+.navlet-container .bottomPanel .panel-content {
 	padding: 0 80px;
 }
 
-#navlet .bottomPanel .panel-content {
+.navlet-container .bottomPanel .panel-content {
 	overflow: visible;
 }
 
-#navlet .timeline {
+.navlet-container .timeline {
 	overflow: visible;
 	position:relative;
 	height: 20px;
 	padding: 0 0 20px 0;
 }
 
-#navlet .timeline-block {
+.navlet-container .timeline-block {
 	position: absolute;
 	top: 0;
 	height: 20px;
@@ -382,7 +343,7 @@
 	box-shadow: inset 0px 0px 6px 1px gray;
 }
 
-#navlet .timeline-block-label {
+.navlet-container .timeline-block-label {
 	
 	position: relative;
 	background-color:brown;
@@ -391,12 +352,11 @@
 	text-shadow: 0 1px 1px #222;
 }
 
-#navlet .timeline-scale-marker {
+.navlet-container .timeline-scale-marker {
 	
 	position:absolute;
 	color: gray;
-	background: none;
-	border: none;
+	text-shadow: none;
 	border-left: 1px solid gray;
 	top: -25px;
 	height: 25px;
@@ -405,67 +365,49 @@
 	text-indent:5px;
 }
 
-#navlet .timeline-block-flag {
+/* Special popup styles for timeline popups: */
+
+.navlet-container .timeline-block-flag {
 	
-	position:	absolute;
-	background-color: black;
-	bottom: 40px;
-	left: -16px;
-	width: 220px;
+	position:	relative;
 	padding: 4px 11px;
+	background-color: black;
+	width: 220px;
+	
 	border-radius: 9px;
 	-moz-border-radius: 9px;
 	-webkit-border-radius: 9px;
-	border: 4px solid gray;
+	border: 6px solid rgba(255, 255, 255, 0.6);
+	-webkit-background-clip: padding;
+    background-clip: padding-box;  
 }
 
-/* START POSTION ADJUSTEMENT FOR HOVERING TIMESCALE BLOCK TOOLTIPS */
-
-#navlet .timeline-block-flag.close-right-side{
+.navlet-container .timeline-block-flag .bottom-arrow {
+	border-color: rgba(255, 255, 255, 0.6) transparent transparent;
+	-webkit-background-clip: padding;
+    background-clip: padding-box;  
+	border-style:solid;
+	border-width:12px;
+	height:0px;
+	width:0px;
 	
-	right: -24px;
-	left: auto;
-}
-
-#navlet .timeline-block-flag.close-right-side  .bottom-arrow  {
 	
-	right: 5px;
+	position: absolute;
+	bottom: -30px;
+	left: 50%;
+	margin-left: -12px;
 }
 
-#navlet .timeline-block-flag.tiny {
-	left: -34px;
-}
-
-#navlet .timeline-block-flag.close-right-side.tiny{
-	
-	right: -24px;
-	left: auto;
-}
-
-#navlet .timeline-block-flag.small {
-	left: -24px;
-}
-
-#navlet .timeline-block-flag.close-right-side.small{
-	
-	right: -24px;
-	left: auto;
-}
-
-/* END POSTION ADJUSTEMENT FOR HOVERING TIMESCALE BLOCK TOOLTIPS */
-
-
-#navlet .timeline-block-flag .field .label {
+.navlet-container .timeline-block-flag .field .label {
 	font-size: 11px;
 	
 }
-#navlet .timeline-block-flag .field .value {
+.navlet-container .timeline-block-flag .field .value {
 	font-size: 11px;
 	float: right
 }
 
-
-#navlet .timeline-block-flag .ctx-label {
+.navlet-container .timeline-block-flag .ctx-label {
 	color: gray;
 	font-style:italic;
 	display: block;
@@ -473,44 +415,44 @@
 	margin-top: 5px;
 }
 
-#navlet .timeline-block-flag .main-field {
-	font-size: 14px;
+.navlet-container .timeline-block-flag .main-field {
 	padding: 7px 0;
 	border-bottom: gray 1px dotted;
 }
-#navlet .timeline-block-flag .main-field .label {
-	font-size: 14px;
+.navlet-container .timeline-block-flag .main-field .label {
 	font-weight: bold;
-}
-#navlet .timeline-block-flag .main-field .value {
 	font-size: 14px;
+}
+.navlet-container .timeline-block-flag .main-field .value {
 	font-weight: bold;
 	color: yellow;
 }
 
-#navlet .timeline-block-flag .bottom-arrow {
-	border-color: gray transparent transparent;
-	border-style:solid;
-	border-width:20px;
-	height:0px;
-	width:0px;
-	
-	position: absolute;
-	bottom: -44px; /* 40px height + border */
+/* END Special popup styles for timeline popups: */
+
+/* START POSTION ADJUSTEMENT FOR HOVERING TIMESCALE BLOCK TOOLTIPS */
+
+.navlet-container .timeline-block-flag.close-right-side {
+
 }
 
-#navlet .timeline-block:hover {
+.navlet-container .timeline-block-flag.close-left-side{
+
+}
+
+/* END POSTION ADJUSTEMENT FOR HOVERING TIMESCALE BLOCK TOOLTIPS */
+
+.navlet-container .timeline-block:hover {
 	cursor: pointer;
 	margin-right: -1px;
 	margin-bottom: -1px;
-	/*border: brown 1px solid;*/
 	z-index: 1;
 	-webkit-box-shadow: inset 0px 0px 6px 1px white;
 	-moz-box-shadow: inset 0px 0px 6px 1px white;
 	box-shadow: inset 0px 0px 6px 1px white;
 }
 
-#navlet .timeline-scale {
+.navlet-container .timeline-scale {
 	height: 20px;
 	margin: 0;
 	position: relative;
@@ -519,16 +461,15 @@
 	border-top: 25px solid whiteSmoke;
 }
 
-#navlet #timeline-scale-feedback {
+.navlet-container #timeline-scale-feedback {
 	
 	position: absolute;
 	height: 18px; /* should be equal to .timeline-scale height */
 	width: 2px;
 	top:0;
-	/*background-color: gray;*/
 }
 
-#navlet #timeline-scale-feedback #time-cursor {
+.navlet-container #timeline-scale-feedback #time-cursor {
 	position: absolute;
 	top: -43px; /* 18 + 25 */
 	height: 18px;
@@ -541,7 +482,7 @@
 	border-radius: 5px;
 }
 
-#navlet #timeline-scale-feedback #time-vert-line {
+.navlet-container #timeline-scale-feedback #time-vert-line {
 	height: 125px;
 	width: 2px;
 	background-color: gray;
@@ -550,45 +491,39 @@
 	top: -25px;
 }
 
-#navlet .timeline-scale  .tick{
+.navlet-container .timeline-scale  .tick{
 	width: 0;
 	border: none;
 	/*border-left: 1px solid gray;
 	color: gray;*/
 }
 
-#navlet .timeline-label {
+.navlet-container .timeline-label {
 	text-indent: 6px;
 }
 
-#navlet .chart-navBlock 				{	background-color: cyan; 		}
-#navlet .chart-dnsBlock 				{	background-color: purple; 		}
-#navlet .chart-TCPBlock 				{	background-color: magenta; 		}
-#navlet .chart-requestBlock 			{	background-color: green; 		}
-#navlet .chart-responseBlock 		{	background-color: blue; 		}
-#navlet .chart-domReady 				{	background-color: chocolate; 	}
-#navlet .chart-domReadyDuration 		{	background-color: yellow; 		}
-#navlet .chart-chart-domReadyToLoad	{	background-color: cadetblue; 	}
-#navlet .chart-loadEventDuration		{	background-color: salmon; 		}
+.navlet-container .chart-navBlock 				{	background-color: cyan; 		}
+.navlet-container .chart-dnsBlock 				{	background-color: purple; 		}
+.navlet-container .chart-TCPBlock 				{	background-color: magenta; 		}
+.navlet-container .chart-requestBlock 			{	background-color: green; 		}
+.navlet-container .chart-responseBlock 		{	background-color: blue; 		}
+.navlet-container .chart-domReady 				{	background-color: chocolate; 	}
+.navlet-container .chart-domReadyDuration 		{	background-color: yellow; 		}
+.navlet-container .chart-chart-domReadyToLoad	{	background-color: cadetblue; 	}
+.navlet-container .chart-loadEventDuration		{	background-color: salmon; 		}
+
 /* Utility CSS classes: */
-#navlet .none {
+.navlet-container .none {
 	display:none;
 }
-#navlet .hidden {
+.navlet-container .hidden {
 	visibility:hidden;
 }
-#navlet .reveal:hover  .none {
+.navlet-container .reveal:hover  .none {
 	display: block;
 }
-#navlet .reveal:hover  .hidden {
+.navlet-container .reveal:hover  .hidden {
 	visibility:visible;
-}
-
-/* Default CSS style tanking: */
-
-#navlet div {
-	display: block;
-	width: auto;
 }
 
 
