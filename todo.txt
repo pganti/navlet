@@ -19,7 +19,7 @@ TODO:
  - make panel render only when perfdata is available
  - video with voice/subtitles on project page
  - fix position of tooltip for small/tiny sizes
-
+MAke the whole bookmarklet resistant to CSS from monitored page (iframe/blindage)
 DONE:
 
  - [in progress] Migrate panels to iframe panels to avoid CSS side effects
