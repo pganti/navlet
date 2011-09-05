@@ -2120,19 +2120,17 @@
 		};
 		
 		var reloadRemoteWindow = function() {
-			/*
-			if(autoCloseTimer != null) {
-				// Autoclose set, deactivating it:
-				logger.info("Clearing - autoclosing");
-				remoteWindow.clearTimeout(autoCloseTimer);
-			}*/
+			
 			logger.info("Reloading");
 			
 			// Setting an arbitrary on current remote window object:
-			//remoteWindow["navlet-window-id"] = new Date().getTime();
-			
-			//logger.info('"navlet-window-id" set on current remoteWindow');
-			//logger.info('reload imminent on current remoteWindow');
+			remoteWindow["navlet-window-id"] = new Date().getTime();
+			remoteWindow.onload = function() {
+				logger.info("  -- onload -- : deleteting navlet-window-id");
+				delete remoteWindow["navlet-window-id"];
+			}
+			logger.info('"navlet-window-id" set on current remoteWindow');
+			logger.info('reload imminent on current remoteWindow');
 			
 			// Reloading the remoteWindow in order to get fresh window.performance data:
 			remoteWindow.location.reload(true);
@@ -2141,71 +2139,34 @@
 			// We can't use classic load listeners.
 			// We will use the "navlet-window-id" property that we attach to the window object before
 			// the reload. We will poll for it from masterWindow and as soon as we can't find the property 
-			
+			// As a safenet, we will use the load event of the window since for unknow reason, the window object is sometime not trashed correctly.
 			// anymore, we consider the remote window reloaded.			 
 			
-			//logger.info('Starting poller on remoteWindow to check reload state:');
-			/*
+			logger.info('Starting poller on remoteWindow to check reload state:');
+			
 			var reloadDonePoller = masterWindow.setInterval(function(){
 				
 				if(typeof(remoteWindow["navlet-window-id"]) == "number") {
-				
 					logger.info("Reload not completed, previous window property 'navlet-window-id' found:" + remoteWindow["navlet-window-id"] );
+				}
+				else if(typeof(remoteWindow.setTimeout) != "function") {
+					logger.info("Reload not completed, setTimeout host function not ready");
 				}
 				else {
 					// Reload end detected, clearing the poller.
 					masterWindow.clearTimeout(reloadDonePoller);
 					
-					// And let's wait 500ms more just in case of:
-					//masterWindow.setTimeout(function() {
-						
-						logger.info("Creating Navlet remote instance");
-			
-						var remoteNavlet = new RemoteNavlet();
-						remoteNavlet.init(remoteWindow, 
-							{
-								"remoteWindow": remoteWindow,
-								"masterWindow": ctx
-							}
-						);
-					//}, 500)
-					
-				}
-				
+					logger.info("Creating Navlet remote instance");
+		
+					var remoteNavlet = new RemoteNavlet();
+					remoteNavlet.init(remoteWindow, 
+						{
+							"remoteWindow": remoteWindow,
+							"masterWindow": ctx
+						}
+					);	
+				}	
 			}, AppConfig.timers.reloadDonePollerInterval);
-			*/
-			/*
-			race condition with above reload 
-			Javascript context got storm by the end of reload
-			
-			remoteWindow.onload = function() {
-				logger.info("onload CALLLED");
-			}*/
-			
-			masterWindow.setTimeout(function(){
-				logger.info("Creating Navlet remote instance");
-			
-				var remoteNavlet = new RemoteNavlet();
-				remoteNavlet.init(remoteWindow, 
-					{
-						"remoteWindow": remoteWindow,
-						"masterWindow": ctx
-					}
-				);
-				
-				autoCloseTimer = remoteWindow.setTimeout(function(){	
-							
-					// Autoclose programmed if we lose connection 
-					// with masterWindow (could be close by the user for instance)
-					logger.info("Connection lost - autoclosing remoteWindow");
-					remoteWindow.close();	
-				}, AppConfig.timers.autoCloseTimerDuration);
-				
-			}, 3000); // TODO: find a better way to handle 'reload load event' (breaking on IE without setTimeout)
-					  // We could add a setimouted recovery callback but then difficulty reside in making the difference
-					  // Between a not well set remoteNavlet and a long loading page...
-					  // Short term solution for this late end of week end commit is too set a "big enough" value..
-			
 		};
 		
 		
@@ -2250,6 +2211,14 @@
 				head = ctx.document.getElementsByTagName('head')[0];
 								
 				initLocalMode();
+				
+				// Cleaning remoteWindow if user close window manually:
+				Utils.addEvent(window, "beforeunload", function() {
+					
+					if(remoteWindow) {				
+						remoteWindow.close();
+					}
+				});
 				
 			},
 			
